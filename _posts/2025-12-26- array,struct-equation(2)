@@ -1,0 +1,82 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+//기본적으로 이 코드는 전 코드와 달리, 0이라는 공간을 따로 저장할 필요가 없는 장점이 있다.
+//하지만 시작과 끝 인덱스를 관리하여야 하며, 차수도 저장해야 하는 단점이 있다.
+#define MAX_TERMS 101
+typedef struct {
+	float coef; //계수가 무엇인지
+	int expon;  //몇 차 인지
+}polynomial;
+polynomial terms[MAX_TERMS] = { {8,3},{7,1},{1.0},
+								{10,3}, {3,2},{1,0} };  //구조체 배열. 이 안에 두개의 2개의 식이 있느 셈이다.
+int avail = 6; //빈 공간 가르킴 (두 다항식의 결과를 입력할 인덱스)
+
+// 두개의 정수를 비교
+char compare(int a, int b) {
+	if (a > b) return '>';
+	else if (a == b) return '=';
+	else return '<';
+}
+
+//새로운 항을 다항식에 추가한다.
+void attach(float coef, int expon) {
+	if (avail > MAX_TERMS) {
+		fprintf(stderr, "항의 개수가 너무 많음\n");  
+		exit(1);
+	} //항의 개수는 제한되 있음.
+	terms[avail].coef = coef; //terms의 6번째 (아직 빈) 인덱스의 coef 와 expon 을 저장. 
+	terms[avail].expon = expon;
+	avail++; // 이후 avail++ 을 하여 다음 연산 저장입력 기다림.
+}
+
+//C = A+B
+void poly_add2(int As, int Ae, int Bs, int Be, int* Cs, int* Ce) { //As, Ae 는 다항식 A의 시작과 끝을 말한다. 나머지도 마찬가지.
+	float tempcoef; 
+	*Cs = avail; // 덧셈 결과 다항식 C의 시작을 avail으로 
+	while (As <= Ae && Bs <= Be)  //다항식 시작을 가리키는 것이 다항식 끝을 넘을때 모두. 반복을 끝낸다.
+		switch (compare(terms[As].expon, terms[Bs].expon)) {  //A의 구조체 시작인덱스의 expon(차수) 와 B의 expon을 비교한다.
+		case '>':
+			attach(terms[As].coef, terms[As].expon); //A의 차항이 더 클 경우 그대로 As (A의 최고차항)의 결과(coef,expon)만을 avail인덱스에 저장.
+			As++; //이후 As++ 를 한다. 즉 이제는 다음 배열 요소에 있는 차수로 생각.
+			break;
+
+		case '=':
+			tempcoef = terms[As].coef + terms[Bs].coef; //두 차수가 같을 경우에 우선 계수 끼리 더한다.
+			if (tempcoef)
+				attach(tempcoef, terms[As].expon); //계수끼리 더해서 0이 될 확률이 있으므로 이렇게 조건문을 제시한거다. 이 경우 계수는 tempcoef로, 차수는 As,Bs 같기에 뭘 하든 상관없다.
+			As++;
+			Bs++;
+			break;
+
+		case '<':
+			attach(terms[Bs].coef, terms[Bs].expon); //이 경우는 B의 차항이 더 클경우이다. 같은 논리.
+			Bs++;
+			break;
+		}
+	//A의 나머지 항들을 이동함
+	for (; As <= Ae; As++)
+		attach(terms[As].coef, terms[As].expon);
+	//B의 나머지 항들을 이동함
+	for (; Bs <= Be; Bs++)
+		attach(terms[Bs].coef, terms[Bs].expon);
+	*Ce = avail - 1;
+}
+
+void print_poly(int s, int e) {
+	for (int i = s; i < e; i++)
+		printf("%3.1fx^%d + ", terms[i].coef, terms[i].expon);
+	printf("%3.1fx^%d\n", terms[e].coef, terms[e].expon);
+}
+
+int main() {
+	int As = 0, Ae = 2, Bs = 3, Be = 5, Cs, Ce;
+	poly_add2(As, Ae, Bs, Be, &Cs, &Ce);
+	print_poly(As, Ae);
+	print_poly(Bs, Be);
+	printf("------------------------------------------------------------\n");
+	print_poly(Cs, Ce);
+	return 0;
+}
+//여기서의 As는 5,4,3, .. 이런식으로 순차적으로 하나씩 줄어가는 차수가 아니다. 배열의 인덱스임을 상기하자.
+//이 코드는 계수가 0인 차항을 생략한 거기에, 차수와 계수를 따로 구조체 배열로 저장한 것이다.
