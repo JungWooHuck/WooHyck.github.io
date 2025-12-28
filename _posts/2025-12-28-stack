@@ -1,3 +1,4 @@
+1. 스택을 전역 변수로 구현하는 법.
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -51,4 +52,100 @@ int main() {
 	printf("%d\n", pop());
 	printf("%d\n", pop());
 	return 0; //출력은 맨 마지막으로 push한 3부터 1순서로 
+}
+-------------------------------------------------------------------------------
+이 예시의 경우에는 정수를 저장하는 것이다. 만약 더 복잡하다면, 구조체로 표현하면 된다. 예컨데 이런식으로. 
+#include <stdio.h>
+#include <stdlib.h>
+#define MAX_STACK_SIZE 100
+#define MAX_STRING 100
+
+typedef struct {
+	int student_no;
+	char name[MAX_STRING];
+	char address[MAX_STRING];
+}element; //이번엔 스택에 저장되는 그 하나하나의 데이터를 구조체로 두는 것이다.
+
+//구현 부분은 윗 코드와 같다.
+int main() {
+	element ie = { 20190001,
+				"Hong",
+				"Soeul" };
+	element oe;
+
+	push(ie);//스택에 ie구조체를 넣음
+	oe = pop(); //pop()의 반환값을 이용하여, ie의 요소 값들을 모두 oe에 저장.
+	printf("학번 : %d\n", oe.student_no);
+	printf("이름 : %s\n", oe.name);
+	printf("주소 : %s\n", oe.address);
+	return 0;
+
+}
+----------------------------------------------------------------------------------
+이런 방법은 매우 직관적이고, 이해하기도 쉬우나, stack배열과 top인덱스가 말 그대로 '전역변수' 로 선언을 시킨 것이기에, 
+여러개의  스택을 동시에 다루기에는 까다롭다.
+물론 해결방법이 있다. top 과 stack배열을 하나의 구조체로 결합시키고, 이 구조체의 포인터를 함수로 전달한다. 즉 새로운 구조체 타입을 만드는 것이다. 
+이후 이 구조체에 대한 포인터를 각 함수의 매개변수로 전달하는 것이다. 이게 두번째 방법이다.
+2. 함수의 매개변수로 전달.
+
+#include <stdio.h>
+#include <stdlib.h>
+
+//차후에 스택이 필요하면 여기만 복사하여 붙인다.
+#define MAX_STACK_SIZE 100
+
+typedef int element;
+typedef struct {
+	element data[MAX_STACK_SIZE];
+	int top;
+}StackType;
+
+void init_stack(StackType* s) { //왜 구조체의 주소를 쓰는가..? 함수를 벗어난 공간에서는 일반적으로 쓸 경우 값에 의한 복사만이 된다. 따라서, 원본 구조체를 변경하기 위하여, 주소로 포인터를 활용하여 접근해야 한다.
+	return (s->top = -1);
+}
+
+int is_empty(StackType* s) { //모든 연산이 이제 구조체의 포인터를 매개변수로 받는다.
+	return (s->top == -1);
+}
+
+int is_full(StackType* s) {
+	return (s->top == (MAX_STACK_SIZE - 1));
+}
+
+
+void push(StackType* s, element item) {
+	if (is_full(s)) {
+		fprintf(stderr, "스택 포화 에러\n"); 
+		return;
+	}
+	else s->data[++(s->top)] = item; //어색해 보여도, 틀리지 않는 문법. s구조체의 data 에 top번째 인덱스의 값에 item을 넣은 후, top을 +1 한다.
+}
+
+element pop(StackType* s) {
+	if (is_empty(s)) {
+		fprintf(stderr, "스택 공백 에러\n");
+		exit(1);
+	}
+	else return s->data[(s->top)--];
+}
+
+element peek(StackType* s) {
+	if (is_empty(s)) {
+		fprintf(stderr, "스택 공백 에러\n");
+		exit(1);
+	}
+	else return s->data[s->top];
+}
+
+int main() {
+	StackType s;//이런 식으로 구조체 변수를 선언하여, 스택을 여러개 생성할 수 있다.
+//구조체 변수를 여러개 만든다고 해서 각 top변수나 배열이 같은 것이 아니다. 모두 독립적이다.
+
+	init_stack(&s);
+	push(&s, 1);
+	push(&s, 2);
+	push(&s, 3);
+	printf("%d\n", pop(&s));
+	printf("%d\n", pop(&s));
+	printf("%d\n", pop(&s));
 }
