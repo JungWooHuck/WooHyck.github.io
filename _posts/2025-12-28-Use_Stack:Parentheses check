@@ -1,1 +1,90 @@
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define MAX_STACK_SIZE 100
+
+//스택코드 추가
+typedef int element;
+typedef struct {
+	element data[MAX_STACK_SIZE];
+	int top;
+}StackType;
+
+void init_stack(StackType* s) { 
+	return (s->top = -1);
+}
+
+int is_empty(StackType* s) { 
+	return (s->top == -1);
+}
+
+int is_full(StackType* s) {
+	return (s->top == (MAX_STACK_SIZE - 1));
+}
+
+
+void push(StackType* s, element item) {
+	if (is_full(s)) {
+		fprintf(stderr, "스택 포화 에러\n");
+		return;
+	}
+	else s->data[++(s->top)] = item; 
+}
+
+element pop(StackType* s) {
+	if (is_empty(s)) {
+		fprintf(stderr, "스택 공백 에러\n");
+		exit(1);
+	}
+	else return s->data[(s->top)--];
+}
+
+element peek(StackType* s) {
+	if (is_empty(s)) {
+		fprintf(stderr, "스택 공백 에러\n");
+		exit(1);
+	}
+	else return s->data[s->top];
+}
+//-----------------------스택------------   //다음부터는 이 스택구현에 있어서의 코드는 생략하겠습니다. 
+int check_matching(const char* in) {
+	StackType s;
+	char ch, open_ch;
+	int i, n = strlen(in); // n은 문자열의 길이 이다.
+	init_stack(&s);
+	//괄호 검사 코드이다. 가장 가까운 거리에 있는 괄호들 끼리 항상 서로 쌍을 이루어야 된다.
+	//왼쪽의 괄호를 만나면 스택에 삽입 push를 하고, 오른쪽의 괄호를 만나면, 스택에 있던 요소를 하나 pop() 시킨뒤, 그 괄호와 비교하여 짝이 맞는지 본다.
+	//이때, 오른쪽 괄호를 만났는데, 스택이 비었거나, 모든 괄호를 검사하였으나, 스택에 괄호가 남아있으면, 그것도 false를 반환해야 한다.
+	for (i = 0; i < n; i++) {
+		ch = in[i];
+		switch (ch) {
+		case '(': case '[': case '{':
+			push(&s, ch); //왼쪽 괄호일 경우, push하여 스택에 저장한후, break.
+			break;
+		case ')': case ']': case  '}':
+			if (is_empty(&s)) return 0;
+			else {
+				open_ch = pop(&s); //스택에 있던 왼쪽 괄호를 open_ch 에 대입한다.
+				if ((open_ch == '(' && ch != ')') ||
+					(open_ch == '[' && ch != ']') ||
+					(open_ch == '{' && ch != '}')) {
+					return 0;  //틀리면 바로 멈추고 return 0한다.
+				}
+				break;
+			}
+		}
+	}
+	if (!is_empty(&s)) return 0; //스택에 남아있으면 오류
+	return 1; //함수에 있어서 1을 반환할 경우에만 옳다고 보는 것이다.
+}
+
+int main() {
+	char* p = "{ A[(i+1)]=0; }";     
+	//이 코드를 보자, {, [, ( 가 push로 된 후, 이후 pop으로 스택에 후입선출로 (,[,{ 나오는 거에 따라서, ),],} 으로 나온다,
+	if (check_matching(p) == 1) //즉 반환값 1이 나와서 괄호검사성공이 출력된다.
+		printf("%s 괄호검사성공\n", p);
+	else
+		printf("%s 괄호검사실패\n", p);
+	return 0;
+}
