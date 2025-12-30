@@ -1,0 +1,114 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+
+#define MAX_QUEUE_SIZE 5
+
+//원형 큐를 응용한 예시이다. 큐는 대부분 컴퓨터로 시스템의 특성을 시뮬레이션하여 분석하는데, 이용한다. 
+//예를 들어보자, 이 코드는 은행에서의 고객들이 오는데에, 서비스를 받기 위해 대기 행렬에서 기다리게 되고, 이 대기 행렬의 정보를 큐를 이용하여 구현한다.
+//최종 목표는 고객들이 기다리는 시간에 대한 정보이다. 우선 여기 예시에서의 전제는, 고객들을 받는 행원은 1명이며, 한번에 한명의 사람들이 서비스를 이용한다.
+typedef struct {
+	int id;
+	int arrival_time;
+	int service_time;
+}element;
+
+typedef struct {
+	element data[MAX_QUEUE_SIZE];
+	int front, rear;
+}QueueType;
+
+void error(char* message) {
+	fprintf(stderr, "%s\n", message);
+	exit(1);
+}
+
+void init_queue(QueueType* q) {
+	q->front = q->rear = 0; 
+}
+
+int is_empty(QueueType* q) {
+	return (q->front == q->rear); 
+}
+
+int is_full(QueueType* q) {
+	return ((q->rear + 1) % MAX_QUEUE_SIZE == q->front); 
+}
+
+void queue_print(QueueType* q) { 
+	printf("QUEUE(front=%d rear=%d) = ", q->front, q->rear);
+	if (!is_empty(q)) {
+		int i = q->front;
+		do {
+			i = (i + 1) % (MAX_QUEUE_SIZE);
+			printf("%d | ", q->data[i]);
+			if (i == q->rear)
+				break;
+		} while (i != q->front);
+	}
+	printf("\n");
+}
+
+void enqueue(QueueType* q, element item) {
+	if (is_full(q))
+		error("큐가 포화상태입니다");
+	q->rear = (q->rear + 1) % MAX_QUEUE_SIZE;
+	q->data[q->rear] = item;
+}
+
+element dequeue(QueueType* q) {
+	if (is_empty(q))
+		error("큐가 공백상태입니다");
+	q->front = (q->front + 1) % MAX_QUEUE_SIZE;
+	return q->data[q->front];
+}
+
+element peek(QueueType* q) {
+	if (is_empty(q))
+		error("큐가 공백상태입니다");
+	return q->data[(q->front + 1) % MAX_QUEUE_SIZE];
+}
+
+//큐의 응용 예시이다. 
+int main() {
+	int minutes = 60;
+	int total_wait = 0;
+	int total_customers = 0;
+	int service_time = 0;
+	int service_customer;
+	QueueType queue;
+	init_queue(&queue);
+
+	srand(time(NULL));
+	for (int clock = 0; clock < minutes; clock++) { //clock은 현재 시각을 나타내며, '분' 의 단위이다. 60분이 될 때까지 반복한다.
+		printf("현재시각=%d\n", clock);
+		if ((rand() % 10) < 3) { //난수를 생성하여, 3보다 작으면 새로운 고객이 들어온거다. 그럼 0 1 2 3 4 5 6 7 8 9 중 0 1 2 으로 30% 확률이다.
+			element customer;
+			customer.id = total_customers++;
+			customer.arrival_time = clock;  //손님이 도착한 분 시각.
+			customer.service_time = rand() % 3 + 1; //손님이 이용하는 서비스 분이다. 여기서 미리 임의로 정해질 것이며, 1,2,3 분 중 하나가 될 것이다.
+			enqueue(&queue, customer); //구조체 element 를 큐에 다가 삽입하였다.
+			printf("고객 %d이 %d분에 들어옵니다. 업무처리시간= %d분\n",
+				customer.id, customer.arrival_time, customer.service_time);
+
+		}
+		if (service_time > 0) { //service_time 이 있다는 것은 고객이 있다는 것으로, clock 이 +1 증가하면 그에 맞춰서 service_time이 -1하게 한다.
+			printf("고객 %d 업무처리중입니다. \n", service_customer);
+			service_time--;
+		}
+		else { //만약 service_time == 0이라면
+			if (!is_empty(&queue)) { //그리고 큐가 비워지지 않았다면
+				element customer = dequeue(&queue); //큐에서 요소를 빼놓고 저장한다.
+				service_customer = customer.id;
+				service_time = customer.service_time;
+				printf("고객 %d이 %d분에 업무를 시작합니다. 대기시간은 %d분이었습니다. \n",
+					customer.id, clock, clock - customer.arrival_time);    //대기 시간은 현재 시각 - 도착시각으로 구한다.
+				total_wait += clock - customer.arrival_time; //total_wait 는 대기 시간을 계속 축적하는 것이다.
+
+			}
+		}
+	}
+	printf("전체 대기 시간=%d분 \n", total_wait);
+	return 0;
+}
