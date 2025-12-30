@@ -1,0 +1,85 @@
+#include <stdio.h>
+#include <stdlib.h>
+#define MAX_QUEUE_SIZE 5
+
+
+
+//큐는 스택이 후입선출 방식이라면, 선입선출 방식이다. 예컨데, 어느 가게에서 줄을 설 경우, 먼저 온 사람이 물건을 제일 먼저 사듯이 하는 것이다.
+//이 처럼 큐는 코드로 실생활을 표현할 때도 사용되며, 컴퓨터와 주변 기기 사이의 속도 차이를 보완하기 위해, 큐를 사용하기도 한다.
+//enqueue 연산은 큐의 맨 뒤에 요소를 추가하고,  dequeue 연산은 큐의 맨 앞에 있는 요소를 꺼내서 외부로 반환한다.
+
+//이 코드는 선형 큐(linear queue) 이다. front는 큐의 첫번째 요소이고, rear은 큐의 마지막 요소이다. 둘의 초기값은 -1이고, 각각 데이터가 삭제될떄는 front가 증가하고, 데이터가 증가하면 rear가 증가된다.
+typedef int element; // 정수를 저장하는 선형 큐.
+typedef struct {
+	int front;
+	int rear;
+	element data[MAX_QUEUE_SIZE];
+}QueueType;
+
+void error(char* message) {
+	fprintf(stderr, "%s\n", message);
+	exit(1);
+}
+
+void init_queue(QueueType* q) {
+	q->rear = -1;
+	q->front = -1;  //둘의 초기값을 -1으로 설정.
+}
+
+void queue_print(QueueType* q) {
+	for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
+		if (i <= q->front || i > q->rear)  //큐가 다루는 영역의 바깥에서는
+			printf(" | "); // | 출력
+		else
+			printf(" %d | ", q->data[i]);
+	}
+	printf("\n");
+}
+
+int is_full(QueueType* q) {
+	if (q->rear == MAX_QUEUE_SIZE - 1)  //rear이 배열의 끝에 도달하였는가만 본다.
+		return 1;
+	else
+		return 0;
+}
+
+int is_empty(QueueType* q) {
+	if (q->front == q->rear)
+		return 1;
+	else
+		return 0;
+}
+
+void enqueue(QueueType* q, int item) {
+	if (is_full(q)) { //데이터 추가 전 우선 큐(배열) 이 꽉 차있는지 본다.
+		error("큐가 포화상태입니다.");
+		return;
+	}
+	q->data[++(q->rear)] = item;
+}
+
+int dequeue(QueueType* q) {
+	if (is_empty(q)) {
+		error("큐가 공백상태입니다.");
+		return -1;
+	}
+	int item = q->data[++(q->front)]; //front 와 rear 모두, 먼저 증가(전위 연산자) 하고 나서, 요소를 대입한다.
+	return item;
+}
+//어떻게 보면 이것이 선형 큐의 문제이다. 삭제가 이루어졌다고 하였을때, front 는 +1 이 되는데, 그렇게 된다면, 삭제된 그 공간을 사용할 수 없게 된다.
+//즉 한번 지나가거나, 사용한 인덱스는 다시 사용하지 못한다는 것이 단점이다.
+int main() {
+	int item = 0;
+	QueueType q;
+
+	init_queue(&q);
+
+	enqueue(&q, 10); queue_print(&q);
+	enqueue(&q, 20); queue_print(&q);
+	enqueue(&q, 30); queue_print(&q);
+
+	item = dequeue(&q); queue_print(&q);
+	item = dequeue(&q); queue_print(&q);
+	item = dequeue(&q); queue_print(&q);
+	return 0;
+}
