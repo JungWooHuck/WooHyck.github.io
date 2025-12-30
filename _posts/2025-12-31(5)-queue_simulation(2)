@@ -1,0 +1,134 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define MAX_QUEUE_SIZE 5
+//앞의 코드의 경우에는 직원이 1명일 경우를 전제로 하였다.
+//이 코드의 경우에는 직원의 수를 사용자가 입력할 수 있도록 한다. 하지만 말 그대로 각 줄에 대한 차이점이 없고, 과정 자체가 복잡한 것이 아니니, 멀티 큐가 아닌, 큐를 하나만 쓴다. 
+typedef struct {
+	int id;
+	int arrival_time;
+	int service_time;
+}element;
+
+typedef struct {
+	element data[MAX_QUEUE_SIZE];
+	int front, rear;
+}QueueType;
+
+void error(char* message) {
+	fprintf(stderr, "%s\n", message);
+	exit(1);
+}
+
+void init_queue(QueueType* q) {
+	q->front = q->rear = 0; 
+}
+
+int is_empty(QueueType* q) {
+	return (q->front == q->rear); 
+}
+
+int is_full(QueueType* q) {
+	return ((q->rear + 1) % MAX_QUEUE_SIZE == q->front); 
+}
+
+void queue_print(QueueType* q) { 
+	printf("QUEUE(front=%d rear=%d) = ", q->front, q->rear);
+	if (!is_empty(q)) {
+		int i = q->front;
+		do {
+			i = (i + 1) % (MAX_QUEUE_SIZE);
+			printf("%d | ", q->data[i]);
+			if (i == q->rear)
+				break;
+		} while (i != q->front);
+	}
+	printf("\n");
+}
+
+void enqueue(QueueType* q, element item) {
+	if (is_full(q))
+		error("큐가 포화상태입니다");
+	q->rear = (q->rear + 1) % MAX_QUEUE_SIZE;
+	q->data[q->rear] = item;
+}
+
+element dequeue(QueueType* q) {
+	if (is_empty(q))
+		error("큐가 공백상태입니다");
+	q->front = (q->front + 1) % MAX_QUEUE_SIZE;
+	return q->data[q->front];
+}
+
+element peek(QueueType* q) {
+	if (is_empty(q))
+		error("큐가 공백상태입니다");
+	return q->data[(q->front + 1) % MAX_QUEUE_SIZE];
+}
+
+//이번엔 직원이 여럿 있는 상황으로 본다. 직원을 여럿으로 할 경우에는, 직원에 대하여 동적할당만 받으면 되고, 큐는 하나만 있어도 된다.
+//물론 큐가 하나만 있기에, 즉 따로 어느 요소가 어느 직원으로 갈지 정해진 규칙이 없게 되는 것이기에, 만들어 줘야 한다. 제일 타당한 규칙은, 비어있는 곳으로 줄을 서거나 가는 것이다.
+int main() {
+	
+	
+	int minutes = 60;
+	int total_wait = 0;
+	int total_customers = 0;
+	int *service_time; //동적 할당을 할 것이므로,각 줄의 손님과의 각 서비스 시간과 각 줄의 직원이 맡은 손님의 id를 포인터변수로 선언한다.
+	int *service_customer;
+	int number; //손님을 응대하는 직원 수를 number 이라 하자.
+
+	
+	printf("직원 수를 입력하시오.");
+	scanf("%d", &number);
+
+	service_time = (int*)malloc(sizeof(int) * number);  //각 줄의 service_time 을 동적으로 입력한 직원 수에 따라 동적할당한다.
+	service_customer = (int*)malloc(sizeof(int) * number);
+	for (int i = 0; i < number; i++) {
+		service_time[i] = 0;
+	} //서비스 시간 이기에, 0으로 우선 초기값을 모두 설정한다.
+	QueueType queue;
+	init_queue(&queue);
+
+	srand(time(NULL));
+	for (int clock = 0; clock < minutes; clock++) {
+		printf("현재시각=%d\n", clock);
+		if ((rand() % 10) < 3) {
+			element customer;
+			customer.id = total_customers++;
+			customer.arrival_time = clock;
+			customer.service_time = rand() % 3 + 1;
+
+			enqueue(&queue, customer);
+
+			printf("고객 %d이 %d분에 도착. 업무처리시간=%d분\n",
+				customer.id, clock, customer.service_time);
+		}
+
+		for (int i = 0; i < number; i++) {
+			if (service_time[i] > 0) { //만약 service_time[i] 가 0보다 크다면 그 줄의 직원은 일하는 중이다.
+				printf("직원 %d이 고객 %d 처리중 입니다.\n",i, service_customer[i]);
+				service_time[i]--;
+			}
+		}
+		for (int i = 0; i < number; i++) {
+			if (service_time[i] == 0 && !is_empty(&queue)) { //만약 직원의 배열에서 손님이 없는 직원의 줄이 있다면,
+				element customer = dequeue(&queue); //큐에서 일단 요소 하나를 빼면서 가져온다. 
+
+				service_customer[i] = customer.id; 
+				service_time[i] = customer.service_time;
+
+				printf("고객 %d이 %d분에 직원 %d와 업무 시작. 대기시간=%d분\n",
+					customer.id, clock, i,
+					clock - customer.arrival_time);
+
+				total_wait += clock - customer.arrival_time;
+			}
+		}
+	}
+
+	printf("전체 대기 시간=%d분 \n", total_wait);
+	return 0;
+}
