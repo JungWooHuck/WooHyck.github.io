@@ -1,0 +1,105 @@
+// 덱(deque)은 double-ended queue 의 줄임말로, 큐의 front 와 rear에 대해서  둘 다 삭제와 삽입 기능이 모두 가능한 큐를 말한다.
+// 원형 덱을 구현할 것이다. 그러나, 한가지 주의점이 있다. rear_delete 나, add_front의 경우에는 음수가 될 경우, MAX_QUEUE_SIZEfmf ejgownjdi gksek.
+// 따라서 이때는 이렇게 바뀌어 진다. front(혹은 rear) <- (front(혹은 rear) -1 +MAX_QUEUE_SIZE) % MAX_QUEUE_SIZE; 
+// => 의문점: “큐에서는 front가 ‘첫 요소 앞’을 가리키니까 add_front 할 때는 이미 그 자리를 가리키고 있는 거 아닌가? rear_delete도 rear가 마지막 요소를 가리키고 있으니 그대로 쓰면 되는 거 아닌가?
+// => 답: 코드를 보면 알거다.
+
+#include <stdio.h>
+#include <stdlib.h>
+
+
+
+#define MAX_QUEUE_SIZE 5
+typedef int element;
+typedef struct {
+	element data[MAX_QUEUE_SIZE];
+	int front, rear;
+}DequeType;
+
+void error(char* message) {
+	fprintf(stderr, "%s\n", message);
+	exit(1);
+}
+
+void init_deque(DequeType* q) {
+	q->front = q->rear = 0;
+}
+
+int is_empty(DequeType* q) {
+	return (q->front == q->rear);
+}
+
+int is_full(DequeType* q) {
+	return ((q->rear + 1) % MAX_QUEUE_SIZE == q->front);
+}
+
+void deque_print(DequeType* q) {
+	printf("DEQUE(front=%d rear=%d) = ", q->front, q->rear);
+	if (!is_empty(q)) {
+		int i = q->front;
+		do {
+			i = (i + 1) % (MAX_QUEUE_SIZE);
+			printf("%d | ", q->data[i]);
+			if (i == q->rear)
+				break;
+		} while (i != q->front);
+	}
+	printf("\n");
+}
+
+void add_rear(DequeType* q, element item) {
+	if (is_full(q))
+		error("큐가 포화상태입니다");
+	q->rear = (q->rear + 1) % MAX_QUEUE_SIZE;
+	q->data[q->rear] = item;
+}  //본래 큐의 enqueue 가 add_rear와 같다.
+
+element delete_front(DequeType* q) {
+	if (is_empty(q))
+		error("큐가 공백상태입니다");
+	q->front = (q->front + 1) % MAX_QUEUE_SIZE;
+	return q->data[q->front];
+} //본래 큐의 dequeue 가 delete_front 와 같다.
+
+element get_front(DequeType* q) {
+	if (is_empty(q))
+		error("큐가 공백상태입니다");
+	return q->data[(q->front + 1) % MAX_QUEUE_SIZE];
+}
+
+void add_front(DequeType* q, element val) {
+	if (is_full(q))
+		error("큐가 포화상태입니다");
+	q->data[q->front] = val; //앞 주석에 있어서의 답: 우선 front의 인덱스를 그대로 쓰는 것이 맞다.  add_rear과 delete_front는 먼저 rear 혹은 front를 증가 시키고, 데이터 요소를 접근한다 .
+	//반면에 add_front와 delete_rear은 먼저 데이터 요소에 접근한 뒤, rear과 front를 감소시키는거다.
+	q->front = (q->front - 1 + MAX_QUEUE_SIZE) % MAX_QUEUE_SIZE;
+}
+
+element delete_rear(DequeType* q) {
+	int prev = q->rear; //미리 저장.
+	if (is_empty(q))
+		error("큐가 공백상태입니다");
+	q->rear = (q->rear - 1 + MAX_QUEUE_SIZE) % MAX_QUEUE_SIZE; //그 이후 rear값 변화
+	return q->data[prev]; 
+}
+
+element get_rear(DequeType* q) {
+	if (is_empty(q))
+		error("큐가 공백상태입니다.");
+	return q->data[q->rear];
+}
+
+int main() {
+	DequeType queue;
+
+	init_deque(&queue);
+	for (int i = 0; i < 3; i++) {
+		add_front(&queue, i);
+		deque_print(&queue);
+	}
+	for (int i = 0; i < 3; i++) {
+		delete_rear(&queue);
+		deque_print(&queue);
+	}
+	return 0;
+}
