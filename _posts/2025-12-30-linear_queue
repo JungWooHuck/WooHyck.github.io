@@ -63,7 +63,7 @@ int dequeue(QueueType* q) {
 		error("큐가 공백상태입니다.");
 		return -1;
 	}
-	int item = q->data[++(q->front)]; //front 와 rear 모두, 먼저 증가(전위 연산자) 하고 나서, 요소를 대입한다.
+	int item = q->data[++(q->front)]; //대응 되는 인덱스가 먼저 증가(전위 연산자) 하고 나서, 요소를 대입한다.
 	return item;
 }
 //어떻게 보면 이것이 선형 큐의 문제이다. 삭제가 이루어졌다고 하였을때, front 는 +1 이 되는데, 그렇게 된다면, 삭제된 그 공간을 사용할 수 없게 된다.
