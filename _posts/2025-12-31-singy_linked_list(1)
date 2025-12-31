@@ -1,0 +1,88 @@
+연결리스트
+연결리스트의 장점은 동적으로 크기 변경이 가능하며, 삭제나 삽입 시에, 배열로 구현한 리스트와는 다르게, 데이터를 이동할 필요가 없다는 장점이 있다.
+연결 리스트에 있어서의 데이터는 구조체로, 각 데이터 끼리 연결하는 줄은 포인터로 구현한다.
+그러나, 연결리스트는 배열 리스트와는 다르게, 구현이 어렵고, 데이터 뿐만 아니라, 포인터도 저장해야 한다는 점과, 어떤 n번째 데이터를 찾으려면 처음 데이터부터 순차적으로 접근해야 한다는 단점이 있다.
+배열 리스트의 경우에는 단순 참조 접근일 경우, 그냥 인덱스로 쉽게 접근이 가능하다.
+
+연결리스트는 노드가 있다. 이 노드는 보통은 데이터 필드와 링크 필드 두 가지로 이루어져 있다.
+데이터 필드에는 사용자가 저장하고자아는 아무데이터나 들어간다.  링크 필드에는 다른 노드를 가르키는 포인터가 저장되는 공간이다. 그러므로, 다시 보자면 연결리스트는 첫번째 노드를 알아야만 모든 데이터에 대해 접근이 가능하다. (기본적으로)
+이 첫번째 노드를 가리키고 있는 변수를 헤드 포인터 라고 하고, 마지막 노드의 링크필드는 NULL으로 설정되는데, 이 마지막 노드를 테일 포인터라고 한다.
+이 노드들은 필요할 때마다 malloc()를 이용하여 동적으로 생성된다.
+
+연결 리스트도 종류가 있다. 단순 연결리스트와, 원형 연결리스트, 이중 연결리스트 이렇게 3가지 정도가 있다. 이 글에서는 단순 연결리스트를 다룰거다.
+
+#include <stdio.h>
+#include <stdlib.h>
+
+//노드의 정의: 자기 자신을 참조하는 포인터를 포함하는 구조체를 이용하여 구현해야 한다. 이 노드 안에는 즉 구조체 안에는 데이터필드와 링크필드를 구현해야한다.
+typedef int element;
+
+typedef struct ListNode {
+	element data;//데이터 필드의 데이터.
+	struct ListNode* link;//다음 노드의 주소가 저장될 링크 필트의 구조체 포인터.
+}ListNode; //struct ListNode를 ListNode으로 정의
+//모든 구조체는 단순히 정의만으로 생성되지 않는데, 생성 되려면 항상 구조체 변수를 선언해야 한다.
+
+//오류 처리 함수
+void error(char* message) {
+	fprintf(stderr, "%s\n", message);
+	exit(1);
+}
+
+ListNode* insert_first(ListNode* head, int value) {
+	ListNode* p = (ListNode*)malloc(sizeof(ListNode));
+	p->data = value; //그 노드의 우선 value를 데이터필드에 넣는다.
+	p->link = head;  //헤드 포인터를 p의 링크 필트에 대입한다. 
+	// head는 노드의 맨 첫번째를 가르키는 포인터변수이다. 즉 이 경우에는 원래 있었던 첫번째의 노드에 대한 주소를 p->link 에다가 넣은 것이다. 왜냐하면 p가 이제 첫번째로 삽입이 되게 하기 위해서다.
+	head = p; //이제 헤드 포인터를 변경한다. p로
+	return head;
+}
+
+ListNode* insert(ListNode* head, ListNode* pre, element value) { //노드의 중간에 어떤 한 노드를 삽입을 성공적으로 하려면, 반드시 삽입되는 위치의 바로 전 선행 노드의 정보가 필요하다.
+	ListNode* p = (ListNode*)malloc(sizeof(ListNode)); //삽입하려는 노드
+	p->data = value;
+	p->link = pre->link; //잘 생각하자, 원래 pre의 링크필드에 있던 것은 예컨데 pre  -> a 이런 식으로 있다고 한다면 a 를 가리키고 있는 것이다. 
+	//우리가 원하는 것은 pre -> p-> a 일 것이다. 즉, pre의 링크필드에 있는 변수를 p의 링크필드 변수에 대입해야 하는 것이다.
+	pre->link = p; //이후 pre의 링크필드가 p를 가르키게 한다.
+	return head;
+}
+
+ListNode* delete_first(ListNode* head) {
+	ListNode* removed;
+	if (head == NULL) return NULL; //아직 연결리스트가 비었다면 (head가 아무것도 가르키지 않는다면)
+	removed = head; //우선 포인터에 head를 대입
+	head = removed->link; //removed->link 를 head에 삽입했다는 것은 head로 부터 다음노드를 이제 head가 가리키게 된 것과 다름없다.
+	free(removed); //이제 원래의 첫번째 노드를 free 하거니와, 없앤다. 이로써 첫번째 노드가 바뀐다.
+	return head;
+}
+
+ListNode* delete(ListNode* head, ListNode* pre) { //노드의 중간에 어떤 한 노드의 삭제의 경우에도, 그 삭제하려는 노드의 선행 노드의 정보가 필요하다.
+	ListNode* removed;  //삭제하려는 노드 변수를 일단 선언.
+	removed = pre->link; // pre->link 즉 삭제하려는 노드의 주소를 removed에 저장.
+	pre->link = removed->link; //이후 pre의 링크필드에, 원래 있던 삭제될 노드가 가르키던 다음 노드를 자신이 가르키게 한다.
+	free(removed);
+	return head;
+}
+
+//!규칙이 보인다. 어떠한 삽입 혹은 삭제를 하기 위해서는 그 노드의 앞의 정보가 필요하다. 즉 어떤 노드의 주소는 그 어떤노드의 전 노드가 항상 갖고있는 것이다.
+
+void print_list(ListNode* head) {
+	for (ListNode* p = head; p != NULL; p = p->link) { //반복을 하는데, 우선 head로 시작해서(첫번째 노드) 링크필드를 계속 순회하며 반복한다. 마지막 꼬리노드일 때 까지.
+		printf("%d->", p->data);
+	}
+	printf("NULL \n");
+}
+
+int main() {
+	ListNode* head = NULL;
+
+	for (int i = 0; i < 5; i++) {
+		head = insert_first(head, i); //insert_first 가 반환할 그 주소를 head에다가 대압한다.
+		print_list(head);
+	}
+	for (int i = 0; i < 5; i++) {
+		head = delete_first(head);
+		print_list(head);
+	}
+	return 0;
+} 
