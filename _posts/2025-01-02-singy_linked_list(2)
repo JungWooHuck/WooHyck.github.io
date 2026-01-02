@@ -1,0 +1,89 @@
+// 다항식을 단순 연결리스트로 표현할 것이다. 각 노드는 계수(xoef) 와 지수(expon), 다음 항을 가르키는 링크필드로 이루어져 있다.
+// 다항식의 덧셈이다.
+// 다항식을 순회하면서 만약 p.expon == q.expon 이라면, 새로운 항을 만들어서, 결과 다항식 C에 추가한다. 이후 p와 q는 모두 다음항으로 이동한다.
+// 만약 한쪽의 지수가 더 크다면 그쪽의 항만 C에 추가하며, 그 다항식만 다음항으로 이동한다. (높은 차항 부터 순차적으로 식이 되어있기 때문이다)
+
+// 이 과정들을 한 쪽이 NULL이 될 때까지 하며, 한쪽이 NUlL 에 도달하면, 남아있는 항들은 모두 C로 가져오면 된다.
+
+
+// 이번 코드에 대해서는 두 개의 포인터 head와 tail로 표현될 것이다, 하지만 이들을 묶어서 하나의 헤더노드로 표현할 것이다.
+//우선 tails를 헤더 노드안에 유지한다.
+
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct ListNode { //노드 타입이, 한 항이 되며, 계수,지수,다음항을 가르키는 링크포인터 이렇게 이루어져 있다.
+	int coef;//계수
+	int expon; //지수
+	struct ListNode* link;
+}ListNode;
+
+typedef struct ListType { //리스트 헤더 노드이다. head,  tail 그리고 전체 노드의 수(항의 수) 인 size로 이루어져 있다.
+	int size;
+	ListNode* head;
+	ListNode* tail;  //이렇게 함으로써 장점이 있다. 대표적으로 항상 노드를 추가할 때, head로 처음부터 순회하며 접근하였지만, tail이 있으니, 불필요한 순회가 사라진다.
+}ListType;
+
+ListType* create() { //리스트 헤더 노드를 동적으로 생성하는 함수이다.
+	ListType* plist = (ListType*)malloc(sizeof(ListType));
+	plist->size = 0;
+	plist->head = plist->tail = NULL; //초기 설정
+	return plist;  //plist 는 이렇게 반환되었다.  헤더 노드를 가르키는 포인터이다.
+}
+
+void insert_last(ListType* plist, int coef, int expon) {
+	ListNode* temp = (ListNode*)malloc(sizeof(ListNode)); //하나의 항, 노드를 동적할당하여 만든다.
+	if (temp == NULL)error("메모리 할당 에러");
+	temp->coef = coef;
+	temp->expon = expon; //항에 매개변수 모두 대입
+	temp->link = NULL; //우선 NULL로 설정. 마지막 항에 대입하는 것이기 때문에.
+	if (plist->tail == NULL) {
+		plist->head = plist->tail = temp; //추측점: 여기서의 경우 tail이 NULL으로 즉 생성되지 않은 상태 이기 때문에, head와 tail 모두 temp로 대입된다
+	}
+	else {
+		plist->tail->link = temp; //의문점: 이 줄이 말이 되는가? 마지막항을 가르키는 tail의 다음 항으로 올 것은 아무것도, 즉 NULL이어야 하지, link=temp 가 맞는것인가?
+		plist->tail = temp;  // 답: 원래 마지막 항이었던 링크는 마지막으로 될 다른 항을 향하게 한후, 이후에 tail를 들어오게 된 새로운 마지막 항을 가르키게 옮긴거다
+	} //동시에, tail과 head 의 경우, 포인터 변수이며, 가르키는 대상은 노드. 즉 포인터로 접근하게 된다면, tail이나 head로 원본, 실제로 가리키는 노드 필드를 수정할 수 있게 된다.
+
+	plist->size++;
+}
+
+//list3 = list1+ list2
+void poly_add(ListType* plist1, ListType* plist2, ListType* plist3) {
+	ListNode* a = plist1->head; // 두 항에 있어서... ;; 각 항의 head에 대해서 우선 포인터변수 a와 b로 대입한다...? 임의로 편하게 하기 위하여 이렇게..?
+	ListNode* b = plist2->head;
+	int sum;
+
+	while (a && b) {  //a,b 모두 NULL이 아닐때 까지 반복.
+		if (a->expon == b->expon) { //두 지수가 같다면, 
+			sum = a->coef + b->coef; // 합하고, 결과 다항식 C에 저장.
+			if (sum != 0) insert_last(plist3, sum, a->expon);
+			a = a->link; b = b->link;  //두 다항식 모두 다음 항으로 간다.
+		}
+		else if (a->expon > b->expon) { //한쪽의 지수가 클 경우, 그 항만 C에 저장, 그리고 그 다항식만 다음항으로.
+			insert_last(plist3, a->coef, a->expon);
+			a = a->link;
+		}
+		else {
+			insert_last(plist3, b->coef, b->expon);
+			b = b->link;
+		}
+
+	}
+
+	for (; a != NULL; a = a->link) //이후 남은 항들을 모두 C에 저장할 수 있게 한다. 결과적으로는 이 두 반복문중 항상 한 반복문만 실행된다.
+		insert_last(plist3, a->coef, a->expon);
+	for (; b != NULL; b = b->link)
+		insert_last(plist3, b->coef, b->expon);
+}
+
+void poly_print(ListType* plist) {
+	ListNode* p = plist->head;
+
+	printf("polynomial = ");
+	for (; p; p = p->link) {
+		printf("%d^%d + ", p->coef, p->expon);
+	}
+	printf("\n");
+}
+
