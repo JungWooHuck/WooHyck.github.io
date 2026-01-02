@@ -24,6 +24,11 @@ typedef struct ListType { //리스트 헤더 노드이다. head,  tail 그리고
 	ListNode* tail;  //이렇게 함으로써 장점이 있다. 대표적으로 항상 노드를 추가할 때, head로 처음부터 순회하며 접근하였지만, tail이 있으니, 불필요한 순회가 사라진다.
 }ListType;
 
+void error(char* message) {
+	fprintf(stderr, "%s\n", message);
+	exit(1);
+}
+
 ListType* create() { //리스트 헤더 노드를 동적으로 생성하는 함수이다.
 	ListType* plist = (ListType*)malloc(sizeof(ListType));
 	plist->size = 0;
@@ -87,3 +92,27 @@ void poly_print(ListType* plist) {
 	printf("\n");
 }
 
+int main() {
+	ListType* list1, * list2, * list3;
+
+	list1 = create();
+	list2 = create();
+	list3 = create();
+
+	insert_last(list1, 3, 12);
+	insert_last(list1, 2, 8);
+	insert_last(list1, 1, 0);
+	
+	insert_last(list2, 8, 12);
+	insert_last(list2, -3, 10);
+	insert_last(list2, 10, 6);
+
+	poly_print(list1);
+	poly_print(list2);
+
+	poly_add(list1, list2, list3);
+	poly_print(list3);
+
+	free(list1); free(list2);free(list3);
+	
+}
