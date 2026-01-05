@@ -1,0 +1,72 @@
+#include <stdio.h>
+#include <stdlib.h>
+//원형리스트든, 단일 리스트든, 항상 어떤 노드에 접근이 된 상태에서는 앞 노드에 대해 접근하기가 번거로웠다. 
+//따라서 자유롭게 움직이기 위하여 이중연결리스트가 나온 것이다.
+//이 코드의 경우에는 '헤드 포인터' 가 아닌, '헤드 노드'를 가진 이중 연결 리스트이다. 헤드노드는 데이터는 가지지 않는다.
+typedef int element;
+typedef struct DListNode {
+	element data;
+	struct DListNode* llink; //링크 필드가 이제는 앞과 뒤를 가르키는 포인터 변수가 2개가 있다. llink가 앞, rlink가 뒤 노드를 가르킨다.
+	struct DListNode* rlink;
+}DListNode;  //이게 하나의 노드이다.
+
+void init(DListNode* phead) {
+	phead->llink = phead;
+	phead->rlink = phead; //이중 연결 리스트 초기 초기화
+}
+
+void print_dlist(DListNode* phead) {
+	DListNode* p;
+	for (p = phead->rlink; p != phead; p = p->rlink) {
+		printf("<-| |%d| |-> ", p->data);
+	}
+	printf("\n");
+}
+
+void dinsert(DListNode* before, element data) { //새롭게 삽입할 노드를 노드 before의 오른쪽에 삽입한다.
+	DListNode* newnode = (DListNode*)malloc(sizeof(DListNode));
+	newnode->data = data;
+	newnode->llink = before; //우선 삽입하는 노드는 당연히 before의 오른쪽이기에, llink는 before으로 
+	newnode->rlink = before->rlink; // 마찬가지로 삽입할 노드의 오른쪽은 본래 before의 rlink 였으므로 저리 대입한다.
+	before->rlink->llink = newnode; //이렇게 해석해야 한다. before의 rlink 의 llink으로, 예를 들어서 before=>newnode=>b 이렇게 만들려고 하는 상황이라 치자. 
+	// 본래는 before의 rlink는 b. 즉  before의 rlink 의 llink 는 b의 llink 와 같은 말로 봐도 된다. 이후, 당연히 b는 newnode의 오른쪽에 있기에 llink 에 대입을 해야한다.
+	before->rlink = newnode;
+	//삽입함수는 새로 만들어진 노드의 링크부터 먼저 바꾸고 나서 생각하자.
+}
+
+void ddelete(DListNode* head, DListNode* removed) {
+	if (removed == head) return;
+	removed->llink->rlink = removed->rlink; //삭제하려는 노드 왼쪽의 rlink를 삭제하려는 노드의 오른쪽으로. a=>removed=>b 이렇게 되있다고 하고, 설명하자면, a의 rlink를 b로
+	removed->rlink->llink = removed->llink; //이 경우는 b의 llink를 a로 설정한 것이다. 쉽다.
+	free(removed); //이후 removed의 노드는 메모리 해제
+}
+
+int main() {
+	DListNode* head = (DListNode*)malloc(sizeof(DListNode)); 
+	init(head); //이렇게 만든 것이 헤드노드인것인가?
+	printf("추가단계\n");
+	for (int i = 0; i < 5; i++) {
+		dinsert(head, i);
+		print_dlist(head);
+	} 
+	//잘 보자. head는 init으로 생겨난 데이터가 없는 헤드노드이다. 이 헤드노드는 반복문 내내 위치를 바꾸지 않는다. 
+	//이 상황에서 dinsert(head, i)를 하였다. 그럼 차근차근 과정으로 보자.
+	//우선 init(head)으로 인하여 head 의 llink와 rlink 모두 head를 가리키게 된다.
+	//다음 단계인 dinsert(head, i) 를 보면, 새롭게 삽입될 노드의 llink는 head가 된다. 이후 rlink는 head의 rlink가 되는데, 이도 head가 된다. 이후 코드를 쭉 따라가면 마치 head => 0 => head 으로 된다.
+	//한번 더 해보자. dinsert(head,1) 이 될것이다. 새롭게 삽입될 노드의 link는 head가 되고, rlink는 0의 노드를 가르키게 된다. 즉 마치 head => 1 => 0 => head 로 된다. (물론 이중리스트이기에 양방향이지만, 표시를 쉽게 하기 위해서 이렇게 하였다)
+	//이렇게 봐도 된다. 헤드노드인 head 는 데이터가 없고, head의 링크필드의 llink는 맨 마지막 노드를, rlink는 맨 처음 노드를 가르키게 된다.
+	for (int i = 0; i < 5; i++) {
+		print_dlist(head);
+		ddelete(head, head->rlink);
+	}
+	free(head);
+	return 0;
+}
+
+//단일과 원형 연결리스트는 삽입하고자 하는 위치에 선행 노드의 정보가 필요하지만, 이중리스트는 그렇지 않다.
+//또한 단일과 원형의 연결리스트는, 단방향으로만 이동이 가능하기에 항상 모든 노드에 접근할 수 있는 헤드포인터가 필요하다.
+//더 정확하게는 모든 연결 리스트에서 head는 리스트를 대표하는 진입점 역할을 하며, 이때 실제 노드 탐색·삽입·삭제는 데이터 필드의 값을 기준으로 수행된다.
+//단일 연결 리스트와 원형 단일 연결 리스트는 경계 조건을 노드 내부에서 처리할 수 없기 때문에 외부에서 시작점을 관리하는 헤드 포인터가 필수적이다.
+//경계 조건은 간단히 말하면 이거다. 처음과 끝. 쉽게 보자. 단일이나, 원형이나 자신의 앞의 노드에 대한 정보가 없기 때문에 자기 자신이 연결리스트의 처음인지 알 수 없다.
+//그렇기에, head를 이용하여, 그 노드가 처음인지 아닌지를 판별하는 것이다.
+//반면 이중 연결 리스트는 헤드 노드를 두면 빈 리스트, 첫 노드, 마지막 노드를 구분할 필요가 없어져 모든 삽입·삭제 연산을 동일한 코드로 처리할 수 있으므로 데이터 없는 헤드 노드를 사용하는 구조를 채택한다.
