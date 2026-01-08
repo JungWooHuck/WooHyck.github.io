@@ -1,0 +1,78 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef int element; 
+typedef struct QueueNode {
+	element data;
+	struct QueueNode* link;
+}QueueNode;
+
+typedef struct {
+	QueueNode* front, * rear;
+}LinkedQueueType;
+
+void init(LinkedQueueType* q) {
+	q->front = q->rear = 0;
+}
+
+int is_empty(LinkedQueueType* q) {
+	return (q->front == NULL);
+}
+
+int is_full(LinkedQueueType* q) {
+	return 0;
+}
+
+void enqueue(LinkedQueueType* q, element data) {
+	QueueNode* temp = (QueueNode*)malloc(sizeof(QueueNode));
+	temp->data = data;
+	temp->link = NULL;  //우선 링크필드를 NULL으로 설정
+	if (is_empty(q)) {
+		q->front = temp;
+		q->rear = temp; //만약 큐의 첫 요소였다면 front와 rear모두 그 첫노드에 설정
+	}
+	else {
+		q->rear->link = temp; //만약 큐가 공백이 아니였다면, 선입선출인 큐의 방식에 따라, rear의 링크필드에 temp를 대입한다.
+		//이상한 연산이 아니다. 분명하게 이때의 큐의 rear은 마지막 요소를 가르키고 있을것이다. 그 마지막 노드의 링크필드에 다음으로 들어올 temp를 대입시킨것이다.
+		q->rear = temp; //이후 rear자체를 새로운 마지막 요소인 temp를 가르키게 한다.
+	}
+}
+
+element dequeue(LinkedQueueType* q) {
+	QueueNode* temp = q->front; //임의의 구조체포인터 temp에 front가 가르키고 있던 노드를 삽입하게 한다.
+	element data;
+	if (is_empty(q)) {
+		fprintf(stderr, "스택이 비어있음\n");
+		exit(1);
+	}
+	else {
+		data = temp->data; //맨 첫 요소 노드의 데이터 임의 저장.
+		q->front = q->front->link; //이미 포인터변수 temp에 첫 요소를 저장하였기에, front는 다음 노드를 가르키게 미리 바꾼다.
+		if (q->front == NULL) //만약 공백상태, 즉 첫 노드가 마지막 노드였다면, 
+			q->rear = NULL; //rear을 NULL으로 대입. 왜냐면 하나의 노드를 제거한다면, 아예 노드가 없는 텅빈 상태가 되기 때문.
+		free(temp); //첫 노드 메모리 해제
+		return data;
+	}
+
+}
+
+void print_queue(LinkedQueueType* q) {
+	QueueNode* p;
+	for (p = q->front; p != NULL; p = p->link)
+		printf("%d->", p->data);
+	printf("NULL\n");
+}
+
+int main() {
+	LinkedQueueType queue;
+
+	init(&queue); //큐 초기화
+	
+	enqueue(&queue, 1); print_queue(&queue);
+	enqueue(&queue, 2); print_queue(&queue);
+	enqueue(&queue, 3); print_queue(&queue);
+	dequeue(&queue); print_queue(&queue);
+	dequeue(&queue); print_queue(&queue);
+	dequeue(&queue); print_queue(&queue);
+	return 0;
+}
