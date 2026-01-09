@@ -59,3 +59,99 @@ int main() {
 	printf("\n");
 	return 0;
 }
+---------------------------------------------------------------
+레벨 순회
+#include <stdio.h>
+#include <stdlib.h>
+#include <memory.h>
+
+//순회방법 중에는 레벨순회가 있다. 각 노드를 레벨순으로 검사하며, 동일한 레벨에서는 항상 좌에서 우로 검사한다. 레벨순회는 큐를 이용한다.
+typedef struct TreeNode {
+	int data;
+	struct TreeNode* left, * right;
+}TreeNode;
+
+
+#define MAX_QUEUE_SIZE 100
+typedef TreeNode* element;
+typedef struct {
+	element data[MAX_QUEUE_SIZE]; 
+	int front, rear;
+}QueueType;
+
+void error(char* message) {
+	fprintf(stderr, "%s\n", message);
+	exit(1);
+}
+
+void init_queue(QueueType* q) {
+	q->front = q->rear = 0; //초기 값을 0으로 설정.
+}
+
+int is_empty(QueueType* q) {
+	return (q->front == q->rear); //같을 경우 공백상태 
+}
+
+int is_full(QueueType* q) {
+	return ((q->rear + 1) % MAX_QUEUE_SIZE == q->front);  //front가 rear보다 하나 앞에 있다면 포화상태
+}
+
+
+void enqueue(QueueType* q, element item) {
+	if (is_full(q))
+		error("큐가 포화상태입니다");
+	q->rear = (q->rear + 1) % MAX_QUEUE_SIZE;
+	q->data[q->rear] = item;
+}
+
+element dequeue(QueueType* q) {
+	if (is_empty(q))
+		error("큐가 공백상태입니다");
+	q->front = (q->front + 1) % MAX_QUEUE_SIZE;
+	return q->data[q->front];   
+}
+
+element peek(QueueType* q) {
+	if (is_empty(q))
+		error("큐가 공백상태입니다");
+	return q->data[(q->front + 1) % MAX_QUEUE_SIZE]; //요소 값을 보기만 하는 거기에, front+1 시킨 인덱스를 반환하지, front 변화한것을 저장하지는 않는다.
+}
+
+void level_order(TreeNode* ptr) { //들어가게 될 ptr은 레벨순회의 의도에 맞게 루트가 들어갈 것이다.
+	QueueType q;
+	init_queue(&q);
+
+	if (ptr == NULL) return;
+	enqueue(&q, ptr); 
+	while (!is_empty(&q)) { //NULL을 만났을 경우 바로 반복 중단.
+		ptr = dequeue(&q); //처음엔 그 루트 첫번째 노드를 삭제하면서 ptr에 저장한다.
+		printf(" [%d] ", ptr->data); //그 ptr 우선 출력
+		if (ptr->left) //만약 ptr의 왼쪽 자식 노드가 있다면
+			enqueue(&q, ptr->left); //큐에 넣는다.
+		if (ptr->right)
+			enqueue(&q, ptr->right); //이후에 오른쪽 자식 노드도 있다면 큐에 넣는다.
+	}
+}
+
+
+//			15
+//	4			  20
+// 1		  16	   25	
+
+//위의 예시로 따라서 한번 해보자. 앞으로 숫자를 일컫는 것은 편의상 그냥 노드라 본다. 우선 n6 이 들어가게 되고, 큐는 [15] 가 된다. 이후 ptr = 15 가 되고, 큐는 [] 가 된다.
+//이후에 15출력, 그 다음에 ptr의 left인 4가 있으므로 [4] 또한 right도 있으므로, [4, 20] 그다음 반복문은 ptr = 4, 출력되고 나서 [20] 이 된다. 이후 4에는 왼쪽 자식 노드만 있으므로, [20, 1]
+// 그리고 다음 반복문으로 ptr = 20, 출력, [1] 20의 왼쪽 오른쪽 둘다 있으므로, 큐는 [1,16,25] 이 된다. 이후에는 선입선출에 의하여, 1, 16, 25가 순서대로 출력되고, 이후에 큐가 비어졌으므로 반복문이 멈춘다,
+TreeNode n1 = { 1, NULL, NULL }; 
+TreeNode n2 = { 4, &n1, NULL };
+TreeNode n3 = { 16, NULL, NULL };
+TreeNode n4 = { 25, NULL, NULL };
+TreeNode n5 = { 20, &n3, &n4 };
+TreeNode n6 = { 15, &n2, &n5 };
+TreeNode* root = &n6;
+
+int main() {
+	printf("레벨 순회=");
+	level_order(root);
+	printf("\n");
+	return 0;
+}
