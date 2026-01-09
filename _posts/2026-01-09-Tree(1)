@@ -46,6 +46,7 @@ TreeNode* root = &n6;
 void inorder(TreeNode* root) { //중위순회 방식
 	if (root != NULL) { //의문점: 조건이 햇갈린다. root는 TreeNode 구조체의 포인터로, 이 구조체 포인터가 NULL이 되려면 data와 left, right 모두 NULL이 되어야 하는 것 아닌가? 
 		//답: 맞다. 잘 생각해보자.  leaf 노드도 출력해야 한다 그럼 leaf도 root가 되어야 한다. 마찬가지로 leaf는 자식이 NULL이지만 데이터는 있으니까, leaf != NULL 이라서 출력된다
+//순환이 결과적으로는 이렇게 된다. 왼쪽으로 갈 수 있을 때까지 계속 간다 막히면 오른쪽으로 이동
 		inorder(root->left); //왼쪽서브트리 다시 순회 (순환 이용)
 		printf("[%d] ", root->data);
 		inorder(root->right);
