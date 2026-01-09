@@ -1,0 +1,101 @@
+//이 코드는 수식 트리 처리 이다. 수식트리로 표현한 수식의 값을 계산한다. 이때, 수식트리의 루트 노드는 연산자이고, 이 연산자의 피연산자인 자식노드들을 계산 하는 방식으로 하기에, 후위 순회 방법의 권고된다.
+
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct TreeNode {
+	int data;
+	struct TreeNode* left,*right;
+}TreeNode;
+
+//			+
+//	*				*
+//1    4        16    25
+
+TreeNode n1 = { 1, NULL, NULL };
+TreeNode n2 = { 4, NULL, NULL };
+TreeNode n3 = { '*', &n1, &n2};
+TreeNode n4 = { 16, NULL, NULL };
+TreeNode n5 = { 25, NULL, NULL };
+TreeNode n6 = { '+', &n4, &n5 };
+TreeNode n7 = { '+', &n3, &n6 };
+TreeNode* exp = &n7;
+
+int evaluate(TreeNode* root) {
+	if (root == NULL)
+		return 0;
+	if (root->left == NULL && root->right == NULL)
+		return root->data;
+	else {
+		int op1 = evaluate(root->left);
+		int op2 = evaluate(root->right);
+		printf("%d %c %d을 계산합니다.\n", op1, root->data, op2);
+		switch (root->data) {
+		case '+':
+			return op1 + op2;
+		case '-':
+			return op1 - op2;
+		case '*':
+			return op1 * op2;
+		case '/':
+			return op1 / op2;
+		}
+	}
+	return 0;
+}
+//쉽다. 차근차근 보자. 전제로 숫자나, 연산자는 하나의 노드를 가르키는 것과 같다. 편의상 표현일 뿐이다.
+//exp 는 우선 +가 된다. 이후 op1 과 op2 는 evaluate(*) 와 evaluate(+) 으로 각각 된다. 이후에 우선 op1 의 재귀호출을 먼저 보자. 그 안에서 op1와 op2 둘다 evaluate(1), evaluate(4) 을 한번더 호출한다. 
+//하지만, 1과 4는 자식노드가 없으므로 조건문에 바로 걸려서, 각각 1과 4로 반환이 된다. 이후 출력문 '1*4 를 계산합니다' 가 출력된다. 이후 바깥 op1 은 4가 된다. op2도 같은 과정을 거치면, 
+//'16+25을 계산합니다" 가 출력되고, op2는 41이 된다. 이후 바깥 단계로 가서 최종적으로 '4 + 41을 계산합니다' 가 출력된다.
+
+
+int main() {
+	printf("수식의 값은 %d입니다. \n", evaluate(exp));
+	return 0;
+}
+
+
+---------------------------------------------------------
+추가 연산
+int get_node_count(TreeNode* node) {
+	int count = 0;
+
+	if (node != NULL)
+		count = 1 + get_node_count(node->left) + get_node_count(node->right);
+
+	return count;
+}
+//노드의 개수
+//코드를 천천히 보자 에를 들어서
+//            q 
+//       a         b
+//   c      d              
+//이런 이진 트리가 있다고 하자.  그러면 count = 1+ get(a) + get(b) 가 된다. 이후에 get(b) 부터 보면 자식노드가 없기에, 1+ 0 +0 이 되어서 1이 된다.
+// get(a) 는 그 안에서 한번더  count = 1+get(c)+get(d) 를 하게 될 것이고, 이때 get(c), get(d) 는 get(b) 와 같은 방식으로 1이 된다. 즉 get(a) = 3이 된다.
+//총합적으로 count 는 1+3+1 = 5, 5개의 노드로 정상적로 나온다.
+// 전체적으로 노드를 구할때는 자기 자신의 노드수인 1과 왼쪽 서브트리, 오른쪽 서브트리의 수를 구한다고 생각해도 좋다.
+
+int get_leaf_count(TreeNode* node) {
+	int count = 0;
+
+	if (node != NULL) {
+		if (node->left == NULL && node->right == NULL)
+			return 1; //이 경우를 만족해야 단말 노드인 것이다.
+		else
+			count = get_leaf_count(node->left) + get_leaf_count(node->right);
+	}      //이 코드는 간단 하다. 계속 해서 왼쪽 자식 노드와 오른쪽 자식 노드를 보면서, if문을 만족할때 까지 하다가, 이후에 다 멈추면 반환값으로 모두 더하여 단말 노드를 구할 수 있게 한다.
+	return count;
+}
+//단말 노드의 개수 구하기
+
+int get_height(TreeNode* node) {
+	int height = 0;
+	
+	if (node != NULL)
+		height = 1 + max(get_height(node->left), get_height(node->right));
+
+	return height;
+}
+//높이 구하기
+//max는 두 인수중 제일 큰 값을 반환하는 것이다. 전체적으로 보면 루트 기준 왼쪽 전체 자식트리와, 오른쪽 전체 자식 트리중 큰 높이를 선택하고 루트까지 합친 간단한 코드로 보인다.
+//그 속으로 들어가면 계속해서 서브트리 안에서도 서브트리를 먼저 비교하고, max를 호출하고를 계속 재귀적으로 할 것이다.
