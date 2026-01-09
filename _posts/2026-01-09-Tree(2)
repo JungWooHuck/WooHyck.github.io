@@ -1,0 +1,61 @@
+//반복적 순회, 스택으로 순회 구현하기.
+#include <stdio.h>
+#include <stdlib.h>
+#include <memory.h>
+
+typedef struct TreeNode {
+	int data;
+	struct TreeNode* left, * right;
+}TreeNode;
+
+#define SIZE 100
+int top = -1; //스택을 이용하여 트리 순회
+TreeNode* stack[SIZE]; 
+
+void push(TreeNode* p) {
+	if (top < SIZE - 1)
+		stack[++top] = p;
+}
+
+TreeNode* pop() {
+	TreeNode* p = NULL;
+	if (top >= 0)
+		p = stack[top--];
+	return p;
+}
+
+void inorder_iter(TreeNode* root) { //이 코드는 중위 순회로 구현한다.
+	while (1) {
+		for (; root; root = root->left) 
+			push(root); 
+		root = pop();  
+		if (!root) break;
+		printf("[%d] ", root->data); 
+		root = root->right; 
+	}
+}
+//			15
+//	4			  20
+// 1		  16	   25	
+
+//위 트리를 전제로 살펴보자. 우선 for문에 의하여 스택에는 [15,4,1] 이렇게 저장이 된다. 이후 root = pop() 에 의해 root = 1 이 되고, 스택은  [15.4] 가 된다. if문은 만족하지 않으니 넘겨지고, 이후 1이 출력된다. 
+// 그리고 1의 오른쪽 자식 노드는 없으므로 root = NULL 이 된다. 여기까지가 한번의 반복문이다.
+
+//두번째 반복문을 이어서 보자. root =NULL이므로, for 문은 넘겨진다. 이후 root = 4, [15],  4출력, root = NULL; 이후 세번째도 마찬가지로 된다고 하면 15 출력 이후, 스택은  빈 상태, root는 15의 오른쪽 자식 트리노드인 20이 된다.
+
+//네번째 반복문부터는 20을 기준으로 되기에, 스택에서는 [20, 16] 이 저장되고, root는 16이, 그렇게 출력되고 NULL이 되고, 다음 반복문엔 20이, 그다음 반복문엔 25... 이런식으로 된다.ㅁ
+
+TreeNode n1 = { 1, NULL, NULL }; 
+TreeNode n2 = { 4, &n1, NULL };
+TreeNode n3 = { 16, NULL, NULL };
+TreeNode n4 = { 25, NULL, NULL };
+TreeNode n5 = { 20, &n3, &n4 };
+TreeNode n6 = { 15, &n2, &n5 };
+TreeNode* root = &n6;
+
+int main() {
+	printf("중위 순회=");
+	inorder_iter(root);
+	printf("\n");
+	return 0;
+}
