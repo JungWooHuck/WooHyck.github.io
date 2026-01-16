@@ -1,0 +1,88 @@
+//두번째 방법은 인접 리스트의 방법으로 각각의 정점에 인접한 정점들을 연결리스트로 표시한 방법이다. 
+//각 연결리스트는 헤더노드를 가지고 있으며, 이 헤더 노드들은 하나의 배열로 구성되어 있기에, 한 정점의 번호만 안다면 각 정점의 연결리스트에 쉽게 접근할 수 있다.
+//정점의 수가 n개 이고 간선의 수가 e개인 무방향 그래프를 표시하기 위해서는 n개의 연결리스트가 필요하고, n개의 헤더노드와 2e개의 노드가 필요하다. (하나의 간선이 두개의 노드를 이으므로)
+//그래프에 간선의 존재여부나 정점의 차수를 알기 위해서는 인접리스트에서의  하나의 임의 정점의 연결리스트를 탐색해야 하므로, 연결 리스트에 있는 노드 수 만큼,.,즉 정점의 차수 만큼 시간이 필요하다.
+//전체 간선의 수를 알아내려면 헤더노드를 포함하여 모든 인접 리스트를 조사해야 하므로 O(n+e) 이다.
+
+#include <stdio.h>
+#include <stdlib.h>
+
+
+#define MAX_VERTICES 50
+typedef struct GraphNode {
+	int vertex; //vertex는 정점 그 자체의 상대번호이고, link는 노드의 말 그대로 링크필드이며, 오름차순(가정)에 따르는 간선의 이동경로에 맞춘 다음 노드의 포인터 주소
+	struct GraphNode* link;
+}GraphNode;
+
+typedef struct GraphType {
+	int n; //정점의 개수
+	GraphNode* adj_list[MAX_VERTICES]; //정점 i의 인접 정점 목록의 시작 주소를 뜻한다. 즉 각 연결리스트의 헤드노드를 저장하는 배열이라 생각해도 된다.
+}GraphType;
+
+
+void init(GraphType* g) {
+	int v;
+	g->n = 0;
+	for (v = 0; v < MAX_VERTICES; v++) 
+		g->adj_list[v] = NULL;  //모든 배열요소에 NULL이라 일단 초기화
+}
+
+void insert_vertex(GraphType* g, int v) { //정점 삽입
+	if (((g->n) + 1) > MAX_VERTICES) {
+		fprintf(stderr, "그래프: 정점의 개수 초과");
+		return;
+	}
+	g->n++; //여기서도 그냥 +1 해도 된다.
+}
+
+void insert_edge(GraphType* g, int u, int v) {
+	//간선 삽입 연산, v를 u의 인접리스트에 삽입한다. 즉 u라는 정점에 간선 정보를 대입.
+	GraphNode* node;
+	if (u >= g->n || v >= g->n) {
+		fprintf(stderr, "그래프: 정점 번호 오류");
+		return;
+	}
+	node = (GraphNode*)malloc(sizeof(GraphNode)); //하나의 노드 동적 할당 생성
+	node->vertex = v; //잘 생각하자. g->adj_list 에서의 '인덱스' 는 곧 '시작 정점 번호' 와 같다. 즉 처음부터 시작이 아닌, 시작 노드가 가르키고 있는 간선의 다음 노드의 정보를 넣는 것이다.
+	node->link = g->adj_list[u]; //새 노드의 링크필드가 원래 헤드노드를 가르키게 한뒤
+	g->adj_list[u] = node; //헤드노드를 새로 삽입한 노드로 교체. 즉 이 삽입방식은 머리 삽입의 방식이며, 삽입할때마다 계속해서 헤드 노드가 삽입된 새로운 노드로 바뀌는 것이다.
+
+}
+
+void print_adj_list(GraphType* g) {
+	for (int i = 0; i < g->n; i++) {
+		GraphNode* p = g->adj_list[i]; // 정점 숫자 0부터 시작해서 정점의 개수만큼 반복하거니와 
+		printf("정점 %d의 인접 리스트 ", i);
+		while (p != NULL) {
+			printf("-> %d ", p->vertex); //NULL을 만날때 까지, 즉 하나의 연결리스트를 계속 출력.
+			p = p->link;
+		}
+		printf("\n");
+	}
+}
+
+int main() {
+	GraphType* g;
+	g = (GraphType*)malloc(sizeof(GraphType));
+	init(g);
+	for (int i = 0;i < 4;i++)
+		insert_vertex(g, i); 
+	insert_edge(g, 0, 1);
+	insert_edge(g, 1, 0);
+	insert_edge(g, 0, 2);
+	insert_edge(g, 2, 0);
+	insert_edge(g, 0, 3);
+	insert_edge(g, 3, 0);
+	insert_edge(g, 1, 2);
+	insert_edge(g, 2, 1);
+	insert_edge(g, 2, 3);
+	insert_edge(g, 3, 2); //순서는 그리 중요하지 않다. 제일 중요한 규칙이 있다면, (g, n, m)으로 삽입을 했다면 동시에 무방향 그래프라면 무조건 (g, m, n) 으로도 해야 한다. 그래야 양방향이 되기 때문이다.
+	print_adj_list(g);
+	free(g);
+	return 0;
+
+}
+
+//의문점:연결리스트에는 여러 삽입 방식이 있는데, 머리 삽입 방식을 사용하는 것인가.? 
+//답: 시간 복잡도가 제일 단순하고 안정적이기 때문이다. 예컨대 중간 삽입과 정렬삽입은 이야기를 생략하고, 꼬리삽입도, tail 포인터를 따로 관리하지 않으면 연결리스트 특성상 한번 삽입할때마다 끝까지 순회해야 한다.
+//즉 tail이라는 것을 따로 관리해야 하거나, 그렇지 않으면 시간 복잡도가 O(n) 이 되기 때문이다.
