@@ -1,0 +1,107 @@
+//Dijkstra의 최단 경로 알고리즘
+//어떤 임의의 두 정점을 잡거니와, 그 두 정점에 있어서 갈 수 있는 최단 거리의 경로를 찾는 알고리즘이다. 
+//우선 집합 S를 시작정점 v로부터의 최단경로가 이미 발견된 정점들의 집합이라고 하자. 이 알고리즘에서는 시작정점에서 집합 S에 있는 정점만을 거쳐서 다른 정점으로 가는 최단거리를 기록하는 배열이 있어야 한다. 그 배열을 distance라 하자.
+//시작정점을 v라고 한다면 distance[v] = 0 이 되고, 다른 정점에 대한 distance값은 시작 정점과 해당 정점간의 가중치 값이 된다. 그러면 가중치 인접 행렬을 weight이라 하면 distance[w] = weight[v][w]가 될것이다.
+//만약 직접 간선이 없다면 무한대의 값을 저장한다.
+//알고리즘의 각 단계에서 S의 집합 안에 없는 정점 중에서 가장 distance값이 작은 정점을 S에 추가한다.
+
+//의문점: 약간 애매하다. 에를 들어 이런 상황이 있지 않나..? 가중치(거리)가 짧은 곳으로 계속 경로를 가지만, 그냥 가중치가 긴, 하지만 정점을 많이 거치지 않아서 결과적으로 두 정점의 최단경로가 후자가 되는..? 
+//의문점: 예를 들어 보자. 시작정점 v와 최종 도착정점 x가 있다고 하자. 하지만 두 정점은 매우 거리가 먼 상태이다. 이 상태에서, 각각 거리 가중치가 짧은 마치 마을(정점) 여러개를 돌아가면서 하는 것보단, 거리가 머나, 고작 2번에 거쳐서 거의 직진으로 가는 고속도로가 효율적이지 않나?
+
+//답: 아니다 다시 생각하자. 다익스트라는 각 구간을 따로 비교하는 게 아니라 출발지부터의 누적 거리를 계속 비교하면서, 만약 어떤 시점에서 ‘어떤 정점으로 가는 누적 거리’가 다른 경로들보다 더 짧아지면 그쪽을 선택하는 알고리즘이다.
+//의문점에서의 예시는 각 구간을 따로 비교하여 생기는 오해이다.
+
+
+//새로운 정점 u가 S에 만약 추가 된다면 S에 있지 않은 다른 정점들의 distance를 수정한다. 새로 추가된 정점 u를 거쳐서 정점까지 가는 거리와 기존의 거리를 비교하여 더 작은 거리로 distance값을 수정한다.
+//하지만 기억하자. Prim의 알고리즘 MST와 처리 방식이 비슷해보이지만 이건 최단경로의 문제이다. 즉 출발지에서부터 봐야한다.
+//예컨대 시작정점이 v이고, 새롭게 추가된 정점이 u, 이제 S에 없는 새로 볼 정점이 w이라 치자. 원래 distance[w] 와 distance[u]+weight[u][w] 이렇게 비교해야 하는 것이다.
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+
+#define TRUE 1
+#define FALSE 0 
+#define MAX_VERTICES 100
+#define INF 1000000
+
+typedef struct GraphType {
+	int n;
+	int weight[MAX_VERTICES][MAX_VERTICES];
+}GraphType;
+
+int distance[MAX_VERTICES]; //시작 정점으로 부터 최단 경로 거리 (누적 경로 거리)
+int found[MAX_VERTICES]; //방문한 정점 표시
+
+int choose(int distance[], int n, int found[]) {
+	int i, min, minpos;
+	min = INT_MAX;
+	minpos = -1; 
+	for (i=0; i<n; i++)
+		if (distance[i] < min && !found[i]) { //현재까지 발견한 최소 누적거리보다 작으며, 그리고 아직 찾아가지 않은 정점이라면
+			min = distance[i];
+			minpos = i;  
+		} //시작 정점(변하지 않음) 으로부터의 distance 중 제일 짧은 것을 선택하는 함수
+	return minpos; //짧은 distance인 도착 정점의 번호 초기에 정점의 번호는 인덱스에 맞춰진다. 
+}
+
+void print_status(GraphType* g) {
+	static int step = 1; //여러번 호출되어도 step은 계속 초기화되지 않고 증가 시킬 목적..? 
+	printf("STEP %d: ", step++);
+	printf("distance: ");
+	for (int i = 0; i < g->n; i++) {
+		if (distance[i] == INF)
+			printf("*");
+		else
+			printf("%2d ", distance[i]);
+	}
+	printf("\n");
+	printf(" found: "); //거쳐간 정점을 순서대로 출력
+	for (int i = 0; i < g->n; i++)
+		printf("%2d ", found[i]);
+	printf("\n\n");
+}
+
+void shortest_path(GraphType* g, int start) {
+	int i, u, w;
+	for (i = 0; i < g->n; i++) {
+		distance[i] = g->weight[start][i]; //시작 정점에 대해서 다른 모든 정점에 있어서의 가중치 정보를 넣는다. distance라는 일차원 배열에
+		found[i] = FALSE;  //모든 정점에 0을 대입
+	}
+	found[start] = TRUE; //시작 지점이니 방문 표시로
+	distance[start] = 0;
+	for (i = 0; i < g->n - 1; i++) { 
+		print_status(g); //처음은 시작지점으로부터 출력
+		u = choose(distance, g->n, found);
+		found[u] = TRUE; //이제 간 정점을 방문한 것으로 
+		for (w = 0; w < g->n; w++)
+			if (!found[w]) //아직 방문하지 않은 정점이라면 모두 다
+				//이것은 마지막으로 추가한 u의 정점에 있어서의 간선 또한 조사하는 것이다. 만약 u와 직접적으로 간선이 없는 정점이라면 INF로 입력되어 있을 것이다.
+				if (distance[u] + g->weight[u][w] < distance[w]) //만약 시작정점으로부터의 다른 정점들의 거리 (혹은 u가 도입되기전 집합으로부터의 distance) 보다 u까지 가는데의 거리와 u-w의 간선 거리를 합친 값이 적다면
+					distance[w] = distance[u] + g->weight[u][w];  //갱신한다. 예컨대 원래 distance[w] 가 처음에 시작점으로부터의 거리였을 것이니, 이렇게 대입이 된다면, 시작점이 q라고 치면 q에서 w의 거리가 distance 였으나, q에서 u 거리+u에서 w의 거리 가 distance로 바뀐다.
+	}
+	//햇갈리지 말자. 각 구간별로 비교가 아니다. 다음 정점으로 가는데의 비교는 출발지로부터의 누적 거리와 비교해야 한다. 
+	
+	//의문점: ...이 코드의 최종 목표지는 어디인것인가..? 대략 보기에는  마치 탐색처럼 보인다. 그도 그럴것이 모든 정점을 거치지 않는가..? 
+	//답: 아마도 따로 목적지를 정하는 것이 아니다. 출발지를 설정했으면 모든 정점에 있어서 어떤 경로가 최단경로인지 다 보여주는 것이고 그것이 최종의 distance배열에 저장되는 것이다.
+	//만약 특정 목적지 하나만 필요하다면 그 특정 정점이 found되는 순간 멈추는 코드를 넣으면 된다
+
+}
+int main() {
+	GraphType g = { 7,
+		{{0,7,INF,INF,3,10,INF},  
+		{7,0,4,10,2,6,INF},
+		{INF,4,0,2,INF,INF,INF},
+		{INF,10,2,0,11,9,4},
+		{3,2,INF,11,0,INF,5},
+		{10,6,INF,9,INF,0,INF},
+		{INF,INF,INF,4,5,INF,0}}
+	};
+	shortest_path(&g, 0);
+	return 0;
+}
+
+//다익스트라는 무조건 시작 정점으로부터의 누적 거리(distance)를 기준으로,
+//아직 확정되지 않은 정점 중 가장 거리가 짧은 정점을 하나씩 선택하여 그 정점의 최단거리를‘확정'해 나가는 알고리즘이다.
+//비교는 항상 distance[w] 와 distance[u] + weight[u][w]이다.
+//말로 풀면 start → u → w 경로가 start → w (기존 경로) 보다 더 짧은가를 비교하는 것이다.
