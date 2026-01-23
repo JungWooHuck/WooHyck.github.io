@@ -1,0 +1,113 @@
+//퀵 정렬
+//퀵정렬도 분할-정복 법에 근거한다. 즉 전체 리스트를 2개의 부분 리스트로 분할하고, 각각의 부분 리스트를 다시 퀵정렬하는 방법이다.
+//다른 점이라면, 분할하는데에 합병 방법과는 다르게, 비 균등하게 분활이 되어진다. 바로 말하자면, '피벗' 이라는 한 요소를 선택하고, 피벗보다 작은 요소는 왼쪽으로, 큰 요소는 오른쪽으로 모두 옮겨지게 한다.
+//그리고, 피벗을 기준으로 그렇게 성공적으로 옮겼다면, 다른 부분리스트도 마찬가지로, 순환 호출한다.
+
+//이렇게 보자. 각 리스트에 있어서, 우선 인덱스 변수 low와 high를 둔다. 피봇은 가장 첫번째 요소라고 치자. low는 왼쪽+1 인덱스 에서 시작하여 한칸씩 뒤로, high는 맨 오른쪽에서 한칸씩 앞으로 온다.
+//이때 low에서 피봇과 비교하는데 더 큰값이 있다면 멈춘다. high도 계속 이동하다가 피봇과 비교하였을때 작은 요소값이 있다면 멈춘다. 두 인덱스가 멈춰졌다면, 그 두 요소 값을 교체한다.
+//이것을 low와 high가 서로 만나고 엇갈린다면 멈춘다. 그리고 (왼쪽 부분으로 엇갈려 오게된) high 인덱스 요소와 피벗을 교환한다.
+
+//이제 코드를 봐보자.
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define MAX_SIZE 10
+#define SWAP(x,y,t) ( (t)=(x), (x)=(y), (y)=(t))
+
+int list[MAX_SIZE];
+int n;
+
+int partition(int list[], int left, int right) {
+	int pivot, temp;
+	int low, high;
+
+	low = left;
+	high = right + 1; 
+	pivot = list[left];
+	do {
+		do
+			low++;  //일단 한칸 오른쪽으로 간다.  
+		while (list[low] < pivot); //이것을 반복한다. low 인덱스에 따른 요소가 pivot보다 작으면 계속 순회한다.
+		do
+			high--; //일단 먼저 한칸 왼쪽으로 간다.
+		while (list[high] > pivot); //이것을 반복한다. high 인덱스에 따른 요소가 pivot보다 크다면 계속 순회한다.
+		if (low < high) //아직 두 인덱스가 서로 엇갈리지 않았다면
+			SWAP(list[low], list[high], temp); //요소끼리 교체
+
+		
+	} while (low < high);  //엇갈릴 그 순간 반복 중지.
+
+	SWAP(list[left], list[high], temp); //list[left] 는 리스트의 맨 처음 요소이다. 즉 피벗이다. 피벗과 엇갈려져있는 상태의 high 의 요소 값 교체.
+	return high; 
+}
+
+void quick_sort(int list[], int left, int right) {
+	if (left < right) {
+		int q = partition(list, left, right); // partition의 반환값은 옮겨진 피벗의 인덱스이다.
+		quick_sort(list, left, q - 1);
+		quick_sort(list, q + 1, right);
+	}
+}
+
+int main() {
+	int i;
+	n = MAX_SIZE;
+	srand(time(NULL));
+	for (i = 0; i < n; i++)
+		list[i] = rand() % 100;
+
+	quick_sort(list, 0, n - 1);
+	for (i = 0; i < n; i++)
+		printf("%d ", list[i]);
+	printf("\n");
+	return 0;
+}
+
+//이제 복잡도를 보자. 마찬가지로 n이 2의 거듭제곱이라 가정하자. 동시에 퀵정렬에서의 리스트 분할이 항상 리스트의 가운데에서 이루어진다고 가정하자.
+//그럼 합병 정렬의 복잡도 분석과 마찬가지가 되어서 k=logn 개의 패스가 필요하게 된다. 각각의 패스에서는 그리고 전체 대부분의 레코드를 비교해야 하므로 n이 나온다.
+//따라서 복잡도는 O(nlogn) 이 된다.   
+//하지만 만약 리스트가 계속 불균형하게 나누어지는 경우가 있다. 그럴 경우에는 거의 O(n^2) 의 시간 복잡도가 된다.
+//그럼에도 불구하고 퀵 정렬은 평균적으로는 시간복잡도가 O(nlogn)으로 나타나며, 다른 O(nlogn)의 복잡도를 가지는 정렬 알고리즘과 비교하였을때 가장 빠른 것으로 나타났다.
+
+//불균형 분할에 대해서 대처하기 위해 이런 방법을 쓸 수 있다. 리스트의 왼쪽값, 오른쪽 값, 중간의 값 3개의 데이터 중에서 값이 중간인 값을 선택하곤 한다.
+
+//대개의C언어 실행시간 라이브러리에 퀵 정렬 함수가 제공되어있다. 이름은 qsort 이다.
+//다음은 qsort 함수의 원형 꼴이다.
+
+//void qsort{
+//	void* base,  //배열의 시작주소
+//	size_t num,  //배열 요소의 개수
+//	size_t width,  //배열 요소 하나의 바이트 크기
+//	int (*compare)(const void*, const void*)
+//	//포인터를 통하여 두개의 요소를 비교하여 비교 결과를 정수로 반환하는 함수
+//};
+
+//이 함수는 각 요소가 width 바이트인 num개의 요소가 가지는 배열에 대해서 퀵정렬을 수행한다. 입력 배열은 정렬된 값으로 덮어 씌워진다.
+//compare은 배열 요소 2개를 서로 비교하는 사용자 제공 함수로, qsort함수가 요소들을 비교할 때마다 다음과 같이 호출하여 사용한다.
+
+// compare( (void *) elem1, (void *) elem2 )
+// 여기에서  elem1 이 elem2 보다 작으면 반환값은 < 0 , 반대는 > 0, 같으면 0
+
+//예컨대 이렇게 쓰자. 다음은 코드 예시이다.
+
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+int compare(const void* arg1, const void* arg2) {
+	if (*(double*)arg1 > *(double*)arg2) return 1;  
+	else if(*(double*)arg1 == *(double*)arg2) return 0;
+	else return -1;
+}
+
+int main() {
+	int i;
+	double list[5] = { 2.1, 0.9, 1.6, 3.8, 1.2 };
+	qsort((void*)list, (size_t)5, sizeof(double), compare);  
+	for (i = 0; i < 5; i++)
+		printf("%f ", list[i]);
+	return 0;
+}
+
