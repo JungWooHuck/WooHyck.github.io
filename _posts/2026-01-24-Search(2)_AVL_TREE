@@ -1,0 +1,271 @@
+//우선 다음 탐색으로 넘어가기 전에, 이진탐색 트리를 복습하자.
+
+//우선 이진 트리는 각 하나의 노드가 최대 2개의 자식을 가지는 트리이다.
+//이진트리의 순회에는 전위순회, 중위순회, 후위순회 이렇게 3가지의 방법으로 크게 있다.
+
+//이진 탐색 트리(BST) 의 경우에는 모든 노드에 대해서. 어떤 루트가 있다면 
+//그 루트를 중점으로 왼쪽 자식은 작은 값, 오른쪽은 큰 값이다. 
+
+//이러한 이진 탐색 트리에서의 경우에는 전체 트리에서의 루트에서 시작하여 키 값이 더 크면 오른쪽, 작으면 왼쪽으로 간다.
+
+
+//만약 트리가 균형트리라면 탐색연산은 O(log n)의 복잡도를 가진다. 그러나, 만약 예를 들어 오른쪽으로만 자식 노드들이 편향되어있는 트리로 되어있을 경우
+//이런 이진 탐색 트리는 복잡도가 O(n) 으로 높아지게 된다.
+
+//이제 이러한 문제점을 해결하기 위해 AVL 트리를 보자.
+// AVL 트리는 왼쪽 서브트리의 높이와 오른쪽 서브 트리의 높이 차이가 1 이하인 이진 탐색 트리이다.
+// 즉 이 경우에는 비균형적인 트리가 생성되지 않아서, 탐색이 O(log n) 의 복잡도를 가지게 된다.
+
+//균형 인수: 왼쪽 서브 트리의 높이-오른쪽 서브 트리의 높이
+//모든 균형 인수가 +- 1 이하라면 이 이진탐색트리를 AVL 트리라고 부를 수 있다.
+
+//균형을 이룬 이진 탐색 트리에서 균형상태가 깨지는 경우는 삽입 연산과 삭제 연산시일 떄다. 다시 복습해보자.
+
+//이진 탐색트리에서 삽입하기 위해서는 키가 중복되면 안되며, 루트에서부터 계속 내려오면서 (마치 탐색처럼) NULL에 노드를 삽입하게 된다.
+//삭제연산은 세가지 경우로 나뉘어졌었지만, 삭제하려하는 노드가 단말노드거나, 하나의 왼쪽(혹은 오른쪽) 서브트리 만을 가지고 있는 경우는 쉽게 단말노드만 지우고, 부모 노드의 링크필드를 NULL으로 (혹은 서브트리의 그 노드의 서브트리) 를 가르키게 하면 된다.
+//삭제하려는 노드가 두개의 서브트리를 가지고 있는 경우는, '왼쪽 서브트리에서의 가장 오른쪽 혹은, 오른쪽 서브트리에서 제일 왼쪽의 노드를 후계자로 지정하여, 삭제한 노드의 자리로 옮기면 된다.
+
+//이제 이제 다시 돌아와서 보자. 우선 AVL트리의 삽입 연산이다.
+//삽입 연산시에는 삽입되는 위치에서 루트까지의 경로에 있는 조상 노드들의 균형 인수에 영향을 줄 수 있다.
+//따라서 즉 새로운 노드의 삽입 후에 불균형 상태로 변한 가장 가까운 조상노드, 균형인수가 +- 2 가 된가장 가까운 조상노드의 서브트리들에 대하여 다시 균형을 잡아야 한다.
+
+//이제 균형있게 다시 만드는 방법을 보자. 방법은 새로운 노드 (삽입된 노드) 부터 균형 인수가 +- 2 가 된 가장 가까운 조상 노드까지를 회전시키는 것이다.
+//이때 범위에 주의하자. 다른 노드들은 변경하지 않는다.
+
+//먼저 이제 균형이 깨지는 경우에 맞춰서 구별하자. 
+//      4       4          4			4
+//    2      2				  2				2
+//  1		    1				 1		1
+
+//각각 모양에 맞춰서 LL, LR, RR, RL 타입이라고 부른다.
+
+//LL타입 먼저 보자. 노드들을 오른쪽으로 회전시킨다.
+//      4       이라면    //        2
+//    2					  //    1      4
+//  1		 
+
+//RR은 LL과 비슷하되 왼쪽으로 회전 시키는 것이다.
+
+//RL은 오른쪽 자식의 왼쪽에 노드가 추가됨으로써 발생한다. 2번의 회전이 필요하다. LR 타입도 마찬가지다.
+//      4					           //		4											//			3
+//	2      이라면 왼쪽으로 회전하여    //	 3        그리고 한번더 오른쪽으로 회전하여	    //     2		4    이렇게 된다.  
+//      3					           // 2													// 
+
+//자 이제 '회전하는' 것에 대하여 구현을 해봐야 한다.
+//일단 AVL 트리에서의 노드는 이런 구조체로 이루어져 있다고 치자.
+/*
+typedef struct AVLNode {
+	int key;
+	struct AVLNode* left;
+	struct AVLNode* right;
+}AVLNode;
+*/
+
+//오른쪽으로 회전하는 rotate_right()를 구현해보자.
+/*
+AVLNode* rotate_right(AVLNode* parent) {
+	AVLNode* child = parent->left; //2를 가르킴
+	parent->left = child->right; //LL의 경우에는 NULL이 저장된다.
+	child->right = parent; //오른쪽으로 회전하게 되므로, 이제 child가 루트처럼 되며, 오른쪽 자식은 parent가 된다. 
+	//생각해보자 포인터만 변화시키면 되며, 엄밀히 또 보면 왼쪽 자식의 노드 1에 대해서는 건들지 않았다. 원래 전체 루트였던 4에 링크필드에 있던 것들이 모두 NULL으로 되며, 이후 2의 노드가 4의 노드를 오른쪽 자식으로 둔 것 뿐이다.
+	return child; //새로운 루트가 반환된다.
+
+}
+*/
+
+
+//      4       이라면    //        2
+//    2					  //    1      4  이게 된다. 이때, 중간의 노드인 2를 child으로 4를 parent으로 설정한다.
+//  1		 
+
+//rotate_left()도 마찬가지로 구현할 수 있다.
+/*
+AVLNode* rotate_left(AVLNode* parent) {
+	AVLNode* child = parent->right;
+	parent->right = child->left;  
+	child->left = parent;
+
+	return child;
+}
+*/
+
+
+//LR과 RL은 순서대로 left,right (right,left) 를 호출한다. 
+
+#include <stdio.h>
+#include <stdlib.h>
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+
+typedef struct AVLNode {
+	int key;
+	struct AVLNode* left;
+	struct AVLNode* right;
+}AVLNode;
+
+int get_height(AVLNode* node) {
+	//트리의 높이를 구하는 함수, 어떻게 보면 균형인수를 구하기 위해서 AVL의 특징이자 지켜야 할 조건인 왼쪽 서브트리의 높이와 오른쪽 서브 트리의 높이 차이가 1 이하를 체크하기 위해서 함수를 구현하였다.
+	int height = 0;
+	if (node != NULL)
+		height = 1 + MAX(get_height(node->left), get_height(node->right));
+	//계속하여 왼쪽 서브트리와 오른쪽 서브트리에 대해서 NULL을 만날떄까지 순환호출을 하여, 가장 큰 높이를 고른 다음에, 루트를 포함시켜야 하므로 +1 을 하여 높이를 구한다.
+
+	return height;
+}
+
+int get_balance(AVLNode* node) {
+	//노드의 균형인수를 반환
+	if (node == NULL) return 0;
+
+	return get_height(node->left) - get_height(node->right);  //왼쪽 서브트리와 오른쪽 서브트리의 높이차가 +-1 모두 이면 AVL의 조건에 맞는 트리이다.
+}
+
+AVLNode* create_node(int key) {
+	AVLNode* node = (AVLNode*)malloc(sizeof(AVLNode));
+	node->key = key;
+	node->left = NULL;
+	node->right = NULL;
+	return(node);
+}
+
+AVLNode* rotate_right(AVLNode* parent) {
+	AVLNode* child = parent->left; 
+	parent->left = child->right; 
+	child->right = parent; 
+
+	return child; 
+}
+
+AVLNode* rotate_left(AVLNode* parent) {
+	AVLNode* child = parent->right;
+	parent->right = child->left;
+	child->left = parent;
+
+	return child;
+}
+
+//AVL 트리에 새로운 노드 추가 함수. 새로운 루트를 반환하게 된다.
+AVLNode* insert(AVLNode* node, int key) {
+	if (node == NULL)
+		return(create_node(key)); //데이터가 key인 노드를 새롭게 생성(삽입) 한다.
+
+	if (key < node->key)
+		node->left = insert(node->left, key);  //계속 순환호출이 된다. 루트부터 시작하여 NULL을 만날때 까지 말이다.
+	else if (key > node->key)
+		node->right = insert(node->right, key); //key가 반대로 현재 보고있는 노드보다 크다면 오른쪽 자식 노드로 간다.
+	else
+		return node; //동일한 키가 있을 경우이며, 이럴 경우에는 삽입이 허용되지 않는다.
+
+	int balance = get_balance(node); 
+	
+	if (balance > 1 && key < node->left->key) 
+		return rotate_right(node); 
+
+	if (balance < -1 && key>node->right->key)
+		return rotate_left(node);
+
+	if (balance > 1 && key > node->left->key) {
+		node->left = rotate_left(node->left);
+		return rotate_right(node);
+	} //LR 타입 처리.
+
+	if (balance < -1 && key < node->right->key) {
+		node->right = rotate_right(node->right);
+		return rotate_left(node);
+	}
+	return node;
+}
+
+void preorder(AVLNode* root) {
+	if (root != NULL) {
+		printf("[%d] ", root->key);
+		preorder(root->left);
+		preorder(root->right);
+	}
+}
+
+int main() {
+	AVLNode* root = NULL;
+
+	root = insert(root, 10);
+	root = insert(root, 20);
+	root = insert(root, 30);
+	root = insert(root, 40);
+	root = insert(root, 50);
+	root = insert(root, 29);
+
+	printf("전위 순회 결과 \n");
+	preorder(root);
+
+	return 0;
+}
+
+/* 
+우선 첫번째 예시는 main에 나온대로 그대로 해보자.
+root = insert(root,10)이다. 처음 초기 root은 NULL으로 설정되었으므로, 저 함수를 실행하였을떄, create_node가 실행되고 반환 값이 10이 되어 root = 10이 된다. (이때 10은 노드를 편의상 표현)
+root = insert(root,20). 별 문제 없이 잘 이어진다. root는 계속 10으로 이어진다.
+	10
+		20     으로 형성된다.
+
+root = insert(root,30) 을 보자. 우선 처음으로는 
+10
+	20
+		30   으로 형성된다.
+이후에 int balance = get_blance(10) 함수를 보자. 반환값으로 되는 것은 get_height(NULL)-get_height(20) 이다. 이제 height 함수로 가보자.
+get_height(NULL)은 반환값으로 0이 나오고, get_height(20)은 height = 1 + max(get_height(NULL), get_height(30)) 으로 되고, 이는 각각 get_height(NULL) 은 0이 나오고, get_height(30) 은 1의 반환값이 나온다. 즉 전체 바깥 height는 2이다.
+따라서 balance는 0-2 = -2의 값이 나온다. -1보다 더 적은 음수의 값이 나온것은 오른쪽의 서브트리의 높이가 더 크다는 뜻이며 동시에 node->right->key 인 20보다 넣으려는 노드의 키값 30이 크므로 RR타입 처리 함수로 간다.
+return rotate_left(node) 가 실행되고, child는 20이 되고, parent는 10이 되거니와 트리의 형태가 이렇게 바뀐다.
+	20
+10		30
+이후 child인 20이 반환되고 root가 20으로 바뀌어 진다.
+
+root = insert(root,40) 이다. 그냥 그대로 삽입되어
+	20
+10		30
+			40 으로 형성된다. root는 그대로 20이다.
+
+root = insert(root,50)의 차례다.
+	20
+10		30
+			40
+				50   으로 처음 형성이 된다.
+
+int balance = get_balance // get balance(20) 은 return get_height(10) - get_height(30) // get_height(10) = 1 // get_height(30) = 1+ max(0, get_height(40)) // get_height(40) = 1+ max(0, get_height(50)) // get_height(50) = 1
+즉 int balance = 1 - 3 = - 2 이므로 위와 같이 한번더 RR 대처 함수 실행
+rotate_left(20) 을 보자. child 는 우선 30이 된다. 그다음에 20의 링크필드 right 가 30의 left 인 NULL이 되어 끊겨진다. 이후 30의 왼쪽 자식 노드가 20이 된다.
+
+그럼 최종적으로 이렇게 형성이 된다,
+		30
+	20		40
+10				50
+그리고  root는 30이 된다.
+
+이후 마지막으로 root = insert(root, 29)가 되어
+		30
+	20		40
+10	  29		50   으로 형성이 된다.
+
+*/
+
+/*
+2번째 예시를 들어보자. 쉽게 해보자.
+만약 AVL을 하지 않으면 
+	30
+10
+	20   으로 되는 식이라고 예시를 치자.
+저 트리에서의 문제는 분명히 root = insert(root, 20) 일것이니 여기서부터만 보자.
+get_balance(30) 이 실행되고, 이는 get_height(10) - 0으로 반환한다. //get_height(10) 은 1+MAX(NULL, 20) 으로 결국 int balance = 2 - 0 = 2 이 된다.
+이후에는 조건식에 따라서 balance는 1보다 큰 정수이고, node->left 인 10보다 크므로 LR 과정 함수를 처리한다.
+
+
+이제 봐보자. 30->left = rotate_left(10); 으로 
+child = 20, 10->right = NULL, 20->left = 10 , 이후 반환값이 child이므로 30의 left = 20 으로 설정 되므로 저렇게 된다.
+		30
+	20
+10
+
+그다음에는  rotate_right(30) 이 실행된다.
+child = 20, 30->left = NULL,  20->right = 30; root = 20
+결국 이런 형태가 된다.
+	20
+10		30
+*/
