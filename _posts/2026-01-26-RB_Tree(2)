@@ -1,0 +1,263 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef enum { RED, BLACK } Color; //노드의 색을 RED=0, BLACK=1로 표현.
+
+typedef struct RBNode {
+    int key;
+    Color color;
+    struct RBNode* left;
+    struct RBNode* right;
+    struct RBNode* parent;
+} RBNode;  //RB Tree의 노드 구조체이다. parent 포인터가 있다.
+
+RBNode* NIL;   // 모든 NULL 대신 쓰이는 Black 노드
+
+
+RBNode* create_node(int key) {
+    RBNode* node = (RBNode*)malloc(sizeof(RBNode));
+    node->key = key;
+    node->color = RED;        //새로 삽입되는 노드는 항상 RED (임의의 노드에서 자손의 NIL들로 가는 경로상의 BLACK수 통일 위해)
+    node->left = NIL;
+    node->right = NIL;
+    node->parent = NULL;
+    return node;
+}
+
+void rotate_left(RBNode** root, RBNode* parent) { //root 전체 트리의 루트, parent는 문제가 되는 트리의 전체 부분에서의 회전 기준점. 사실상 선행하여 설명했던 노드로는 삽입 노드 기준 할아버지 노드로 봐도 된다.
+    //중요하다. 계속 기억하자. parent를 루트로 하는 부분 트리를 회전하는 것이다.
+    //전체 트리 루트가 바뀔수도 있으니 root는 이중포인터로 인자를 받는다.
+    RBNode* child = parent->right;
+
+    parent->right = child->left; //RR 의 상황에서 대부분의 상황에서는 parent->right 는 NIL으로 될 것이다.
+   //child의 왼쪽 서브트리를 parent의 오른쪽으로 옮긴다.
+    if (child->left != NIL)
+        child->left->parent = parent;
+
+    child->parent = parent->parent;
+
+    if (parent->parent == NULL)
+        *root = child; //본래 parent가 전체 트리의 루트였다면 child를 루트로 교체
+    else if (parent == parent->parent->left)
+        parent->parent->left = child; //parent의 부모 노드 즉 할아버지 노드가 있다면, 할아버지 노드의 왼쪽자식을 child라 지정
+    
+    else
+        parent->parent->right = child; //parent의 부모 노드 즉 할아버지 노드가 있다면, 할아버지 노드의 오른쪽자식을 child라 지정.
+
+    //각 else와 else if 문은 parent가 위쪽 트리에서 왼쪽에 있었을때와 오른쪽이 있었을 때 실행된다.
+    child->left = parent;
+    parent->parent = child;
+}
+
+//잘 보자. 회전에 있어서 AVL과 다른 점이 있다면 parent포인터가 있다는 점이다. 즉 조금 복잡하겠지만 전체적으로는 비슷하다.
+/* 1번째 예시
+    10
+        20
+            30
+으로 예시를 들자. parent는 10, child는 20이 된다. 한줄 한줄씩 보자.
+10->right = 20->left 으로 즉 10->right=NIL 이 된다.
+10과 20을 완전히 끊겨놓게 하기 위해서는 20의 parent 포인터도 NIL으로 만들어야 한다. child->parent = parent->parent;  
+(10이 루트 노드가 아니어도 괜찮다. 20은 저 작은 트리내에서는 루트역할을 한다. 즉 10의 부모노드인 것이, 20으로 연결되는 것일 뿐이다)
+
+이후에 if문으로 root에 대한 정보를 바꾼다. parent가 전체 트리의 루트였을 경우에는 왼쪽으로 회전하면 20이 루트가 되는건 쉽게 생각할 수 있을 것이다.
+
+이후에 root가 된 20의 왼쪽 자식에 10을, 그리고 10의 노드에는 20의 자식노드로 새롭게 되었으므로 parent 링크필드에 20을 넣는다.
+
+*/
+
+/* 2번째 예시
+    10
+5
+    20
+이다. 여기서는 기준점의 parent가 5 기준으로 첫 회전을 하게 될것이다. 즉 parent = 5, child = 20
+이후 5->right = 20->left 으로 NIL 대입이 된다.
+이후 child의 parent는 10이 되어진다.
+이번에는 else if (parent == parent->parent->left) 이것에 걸리게 된다. 즉 아직 10과 5는 연결되어 있는 상태이므로 
+5->parent->left = child 이게 된다. 즉 10의 왼쪽 자식이 20이 된다.
+그리고 나서 20의 왼쪽 자식이 5로 설정되게 되어지고, 5의 부모가 20이 되게 설정한다.
+
+저대로라면 
+        10
+    20
+5
+이렇게 될것이다. 괜찮다. 어차피 한번더 회전을 다른방향쪽으로 한번더 할거기에.
+*/
+
+/* 3번째 예시
+10
+    30
+        20 이렇게 된 상황이다. 즉 저 형태는 RL에서 R로 회전을 한 상황이다.
+
+*/
+
+
+/*
+의문점: if (child->left != NIL)
+        child->left->parent = parent; 는 언제 써먹는지 모르겠다...
+
+답:  if (child->left != NIL)문 부터 보자.
+    10 (parent)
+      \
+       20 (child)
+      /  \
+    15    30
+
+이런 상황이라 치자.
+parent->right = 20->left;
+이때 if문이 실행된다. 보자. 10의 right는 15로 지정되었다. 그럼 15의 부모포인터도 10을 가르키게 되야한다. 그러니 child->left->parent = 10 이렇게 실행이 된다.
+이후 20의 부모포인터가 10의 부모를 가르키게 바꾼다. (임의로 10이 트리 전체의 루트라고 치자.) 즉 NIL이 된다.
+이후에는 20이 그대로 루트로 교체가 된다. 그리고 10을 20의 왼쪽 자식 노드로 두고 끝이 난다.
+
+이렇게 될 것이다. 
+            20
+          /    \
+        10      30      
+       / 
+    15
+즉 저 if문은 parent기준으로 왼쪽으로 회전을 하려 하는데, 이미 child에 왼쪽 자식노드가 있을 때 작동한다.
+*/
+
+
+void rotate_right(RBNode** root, RBNode* parent) {
+    RBNode* child = parent->left;
+
+    parent->left = child->right;
+    if (child->right != NIL)
+        child->right->parent = parent;
+
+    child->parent = parent->parent;
+
+    if (parent->parent == NULL)
+        *root = child;
+    else if (parent == parent->parent->left)
+        parent->parent->left = child;
+    else
+        parent->parent->right = child;
+
+    child->right = parent;
+    parent->parent = child;
+}
+
+void bst_insert(RBNode** root, RBNode* node) {
+    RBNode* parent = NULL;
+    RBNode* current = *root;
+
+    while (current != NIL) { //NIL 을 만날때까지 계속 내려간다. 이진탐색트리의 성질에 맞춰서
+        parent = current;
+        if (node->key < current->key)
+            current = current->left;
+        else
+            current = current->right;
+    }
+
+    node->parent = parent;
+
+    if (parent == NULL)
+        *root = node;
+    else if (node->key < parent->key)
+        parent->left = node;
+    else
+        parent->right = node;
+} //BST의 방식과 똑같다. 여기서는 parent를 NULL으로 지정하고, 새 노드의 부모가 될 노드를 미리 저장한다.
+
+void insert_fixup(RBNode** root, RBNode* node) {
+    while (node->parent->color == RED) { //규칙 위반이 생기는 경우의 대다수는 이것이다. 부모와 자식이 연달아 RED일 경우.
+
+        RBNode* parent = node->parent;
+        RBNode* grandparent = parent->parent;
+
+        // 부모가 할아버지의 왼쪽 자식(L)인 경우
+        if (parent == grandparent->left) { 
+            RBNode* uncle = grandparent->right;
+
+            //부모와 삼촌 모두 RED
+            if (uncle->color == RED) {
+                parent->color = BLACK;
+                uncle->color = BLACK;
+                grandparent->color = RED; //이럴경우 할아버지와 부모&삼촌의 색깔을 바꾼다.
+                node = grandparent; // 이후에는 위로 문제를 넘기고 봐본다.
+            }
+            else { //만약 삼촌이 black의 경우는 else 실행된다.
+                if (node == parent->right) { //만약 LR의 상황이라면.
+                    node = parent;
+                    rotate_left(root, node);
+                }
+
+                parent->color = BLACK; //if 문이 실행되지 않았다면 LL의 상황. 
+                //우선 일직선 형태라면, 부모를 Black, 할아버지를 RED으로 바꾼다.
+                grandparent->color = RED;
+                rotate_right(root, grandparent); //이후 할아버지 기준 오른쪽 회전한다.
+            }
+        }
+        // 부모가 할아버지의 오른쪽 자식(R)인 경우.
+        else {
+            RBNode* uncle = grandparent->left;
+
+            if (uncle->color == RED) {
+                parent->color = BLACK;
+                uncle->color = BLACK;
+                grandparent->color = RED;
+                node = grandparent;
+            }
+            else {
+               
+                if (node == parent->left) { //RL
+                    node = parent;
+                    rotate_right(root, node);
+                    
+                }
+     
+                parent->color = BLACK; //if문을 안거쳤다면 RR
+                grandparent->color = RED;
+                rotate_left(root, grandparent);
+            }
+        }
+    }
+
+    (*root)->color = BLACK; // 루트는 항상 BLACK이 규칙이다.
+}
+
+void rb_insert(RBNode** root, int key) {
+    RBNode* node = create_node(key); 
+    bst_insert(root, node); //우선 노드를 생성하고 BST 기존 삽입 방식으로 삽입.
+    insert_fixup(root, node); //이후에 RB규칙에 맞게 교정한다.
+}
+
+void preorder(RBNode* root) {
+    if (root != NIL) {
+        printf("[%d,%s] ",root->key, root->color == RED ? "R" : "B");  //color이 RED가 맞을 경우 R 출력
+        preorder(root->left);
+        preorder(root->right);
+        //전체 출력 형식은 전위 순회로, 루트, 왼쪽, 오른쪽 순서.
+    }
+}
+
+int main() {
+    NIL = (RBNode*)malloc(sizeof(RBNode));
+    NIL->color = BLACK; //NIL의 색깔은 항상 BLACK
+    NIL->left = NIL->right = NIL;
+
+    RBNode* root = NIL;
+
+    rb_insert(&root, 10);
+    rb_insert(&root, 20);
+    rb_insert(&root, 30);
+    rb_insert(&root, 40);
+    rb_insert(&root, 50);
+    rb_insert(&root, 29);
+
+    printf("전위 순회 결과:\n");
+    preorder(root);
+
+    return 0;
+}
+
+//이제 마지막으로 복잡도를 보자. AVL과 마찬가지로 트리를 치우쳐져 하는 것이 아닌 균형상태로 항상 만들려 하기에
+//복잡도는 O(log n) 이다.
+//AVL과 비교해보자. 둘다 이진탐색 트리이며, 둘다 균형상태로 만들려 하기에 O(log n)의 시간복잡도를 가지고 있다.
+//삽입과 삭제에 있어서는 AVL트리에 비해 RED-Black 트리가 더 빠르다. 
+//반면에 검색에 있어서는 AVL트리가 더 빠르다.
+//이유는 단순하다. AVL은 삽입연산을 마친 후에 루트까지 올라가서 모든 노드의 높이를 재계산 한다. 즉 균형 조건이 더 엄격하기 떄문이다.
+
+
+//AVL은 균형인수로, RB은 red-black트리 속성을 만족시키도록 균형을 맞춘다.
