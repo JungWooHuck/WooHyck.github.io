@@ -1,0 +1,139 @@
+//체이닝
+//이렇게 보자. 우선 전에 말했듯이. 버킷의 구조를 바꾸는 형식으로 오버플로우 문제를 해결한다. 
+//삭제와 삽입이 모두 용이한 연결리스트를 이용하며, 이런식으로 삽입이 되어진다.
+//예컨대 h(k) = k mod 7 의 해시함수가 있다고 하자. 이를 통해 8,1,9,6,13 을 삽입한다고. 치자. 8과 1은 해쉬함수를 적용하였을때 1이 된다.
+//즉 충돌이 발생하게 되지만 이렇게 하는 것이다. 1이라는 해시 테이블의 버킷에 이어서 다음 인덱스를 조사하는 것이 아닌, 그대로 1에다가 새 연결 리스트를 할당시키고, 그대로 이어서 삽입하는 것이다.
+//즉 새로운 노드가 생성되고 저장되어 마치 1(해시테이블) -> 8(노드) -> 1(노드) 이런식으로 되는 것이다.
+
+//중복 키라면 연결리스트에 있는 노드들을 모두 조사하거나, 아니면  1(해시테이블) -> 8(노드) -> 8(노드)  이런것도 허용한다. 물론 보통의 경우는 전자이다.
+
+//이제 코드를 보자.
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define TABLE_SIZE 7
+
+typedef struct {
+	int key;
+}element;
+
+struct list {
+	element item;
+	struct list* link;
+};
+
+struct list* hash_table[TABLE_SIZE]; //TABLE_SIZE는 7으로 해쉬 테이블의 크기가 7인 셈이다. 단지. 구조체의 각 배열 요소마다, 데이터를 저장하는 item과 다음 노드를 가르키는 링크 link가 저장되어 있을 뿐이다.
+
+int hash_function(int key) {
+	return key % TABLE_SIZE;
+}
+
+void hash_chain_add(element item, struct list* ht[]) {
+	int hash_value = hash_function(item.key); //우선 해쉬함수를 적용한 인덱스 값을 추출.
+	struct list* ptr;
+	struct list* node_before = NULL, *node = ht[hash_value];  //node는  현재 검사중인 노드로 처음에는 버킷의 노드인 ht[hash_value], 즉 head가 될 것이다.  node_before 은 말그대로 node의 이전 노드이다. 처음은 NULL이 된다.
+	for (; node; node_before = node, node = node->link) { //node가 NULL이 될때까지. 즉 버킷의 연결리스트를 모두 순회한다. 이때 node_before과 node 모두 한칸씩 이동하며 순회한다.
+		if (node->item.key == item.key) { //노드를 계속 순회하면서 중복 키가 있을 경우
+			fprintf(stderr, "이미 탐색키가 저장되어 있음\n");
+			return;
+		}
+		
+
+	}
+	ptr = (struct list*)malloc(sizeof(struct list)); //중복 키가 없을 경우 이며, ptr에 새로운 노드 하나를 동적 할당 시킨다.
+	ptr->item = item;
+	ptr->link = NULL;
+
+	if (node_before) //만약 node_before 가 NULL이 아니라면, 즉 이미 버킷에 다른 노드가 있었다면
+		node_before->link = ptr; //그대로 node_before 의 링크를 ptr으로 연결시킨다. 잘 생각하자. node는 NULL이 되어있을거다. node_before이 연결리스트의 마지막 노드가 될 것이다.
+	else //아닌 경우는 노드가 없던 것으로 빈 노드에 바로 대입시킨다. 
+		ht[hash_value] = ptr;
+}
+
+void hash_chain_search(element item, struct list* ht[]) {
+	struct list* node;
+
+	int hash_value = hash_function(item.key); //찾으려는 키값 기준 해쉬 함수 적용
+	for (node = ht[hash_value]; node; node = node->link) { //이후 적용된 버킷의 연결리스트를 계속 순회하며 비교하며 찾는다. 
+		
+		if (node->item.key == item.key) {
+			fprintf(stderr, "탐색 %d 성공 \n", item.key);
+			return;
+
+		}
+	}
+	printf("키를 찾지 못했음 \n");
+}
+
+void hash_chain_print(struct list* ht[]) {
+	struct list* node;
+	int i;
+
+	printf("=============================================\n");
+	for (i = 0; i < TABLE_SIZE; i++) {
+		printf("[%d]->", i);
+		for (node = ht[i]; node; node = node->link) {
+			printf("%d->", node->item.key);
+		}
+		printf("\n");
+	}
+	printf("=============================================\n");
+
+}
+
+#define SIZE 5 //더 편히 말하자면 KEY값이다. 
+
+int main() {
+	int data[SIZE] = { 8,1,9,6,13 };
+	element e;
+
+	for (int i = 0; i < SIZE; i++) { //삽입 시작
+		e.key = data[i];
+		hash_chain_add(e, hash_table);
+		hash_chain_print(hash_table);
+	}
+	for (int i = 0; i < SIZE; i++) { //탐색 시작
+		e.key = data[i];
+		hash_chain_search(e, hash_table);
+	}
+	return 0;
+}
+
+//이제 전체 해싱의 성능을 분석하자.
+//탐색 연산을 중점으로 볼 것이다. 삽입과 삭제 모두 탐색연산을 중심으로 하여 이루어지기 때문이다.
+//우선 매우 이상적인 해싱은 충돌이 없는 해싱으로 시간 복잡도는 O(1)이다. 하지만 거의 일어날 일이 없지에, 다른 분석이 필요하다. 
+//적재비율 (적재밀도) a = 해시 테이블이 얼마나 채워져 있는가 = 저장된 항목의 개수 / 해싱 테이블의 버킷의 개수
+
+//여기서 a가 0이면 해시 테이블은 비어 있는 것이다. a의 최댓값은 충돌 해결 방법에 따라 크게 달라진다.
+//선형 조사법은 해시 테이블이 가득 찬다면 각 버킷당 하나의 항목이 저장될 것이기에 1이 된다. 체인법에서는 저장할 수 있는 항목의 수가 해시 테이블의 크기를 넘어설 수 있기에 a는 최대값을 가지지 않는다.
+
+
+//일단 결과만을 보자. 선형 조사법에서는  해시 테이블이 채워지면 채워질수록 충돌이 더 많이 일어난다. 탐색을 위한 비교 연산의 개수는 이것이다.
+/*
+- 실패한 탐색: 1/2 {1+ 1/(1-a)^2}
+
+- 성공한 탐색: 1/2 {1+ 1/(1-a)}
+*/
+
+//두 수식을 이용하여 몇개의 a값에 대하여 표를 작성해볼 수 있다. 만약 해시 테이블이 절반정도 채워진 상태에서는 실패 탐색은 2.5 비교연산, 성공 탐색은 1.5 비교연산이다. a 가 0.5 를 넘어갈수록 실패 탐색은 급격하게 탐색시간이 증가한다.
+//다른 예시로 만약 a가 0.9 라면 성공 탐색은 5.5 인 반면에, 실패 탐색은 50.5 이다.
+
+
+
+//체이닝 방법에서는 a가 항목의 개수를 연결 리스트의 개수로 나눈 것이 된다. 즉 평균 적으로 하나의 연결 리스트당 몇 개의 항목을 가지고 있냐가 된다.
+//계산은 이렇게 된다. 실패한 탐색은 a, 성공한 탐색은 1+a/2
+
+//이를 토대로 표를 아까와 같이 만들면 보이는 것이 있다. a가 증가하더라도 성능이 급격하게 떨어 지지 않는다. 
+
+//Lum 과 Yuen, Dodd의 실험적인 연구결과로 하나의 키를 탐색하는 데에 가장 효율적인 방법이 제산 해시 함수와 함께 체이닝을 사용하는 방법이라 나왔다.
+
+//해싱을 정리해보자. 먼저 선형 조사법은 적재밀도를 0.5이하로, 이차와 이중해싱법에서는 적재 밀도를 0.7 이하로 유지시키는 것이 좋다. 
+//체이닝은 적재 밀도에 비례하는 성능을 보인다. 성능을 저하시키지 않고 얼맞든지 저장할 수 있는 요소의 개수를 늘릴수 있는것이 확실한 장점이다.
+
+//마지막으로 이진탐색트리와 해싱을 비교해보자. 해싱은 최선의 경우 탐색 삽입 삭제 모두 O(1)이고 최악은 모두 O(n)이다.
+//이진 탐색트리는 균형트리일 경우 마찬가지로 전부다 O(log n) 이며, 경사트리일 경우 O(n)이다. 
+
+//복잡도로 보면 해싱이 유리할 것 같지만, 단점이 있다. 해싱은 값들을 크기 순서대로 혹은 오름차순으로 정렬되게 못한다. 동시에 부분적으로 탐색이 힘들며, 다음값과 이전값이라는 개념이 없다.
+//또한 해시 테이블을 초기에 얼마나 공간을 할당해야 되는지가 매우 불명확하다는 점이 있다.
+
