@@ -1,0 +1,115 @@
+/*
+앞에서 설명했던 선형 조사법의 코드에 의하면 삭제함수가 없다. 이유는 이와 같다. 탐색함수에서 주석으로 말했지만, 삭제를 하면, 중간에 빈 공간을 만나게 되며, 탐색함수는 키가 없다고 바로 판단해버리기 때문이다,
+
+예를 들어보자. 헤시테이블의 크기는 10이고, h(k) = k mod 10 이다. 그리고 키를 5,15,25 를 넣는다고 치자. 셋은 모두 충돌이 일어나게 되어, 각각 5,6,7 인덱스 버킷에 들어가게 된다.
+이후에 만약 15 키를 삭제 하였다고 치자. 25를 탐색했을때의 상황을 생각해보자. 해싱함수의 계산 값대로 5를 보게 된다. 이후 아니므로 다음인덱스로 조사하려는데 empty상태이므로 
+헤시테이블에는 분명히 키값 25가 있음에도 없다고 출력하게 된다.
+
+이러한 문제점을 해결하기 위해 이렇게 코드를 고친다. 코드를 보자.
+
+*/
+
+
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define KEY_SIZE 10 
+#define TABLE_SIZE 13 
+
+
+
+typedef enum { EMPTY, OCCUPIED, DELETED } status; 
+//EMPTY OCCUPIED DELETED 를 각각 0,1,2으로 저장하였다. 각각 아예 사용한적 없는 버킷, 사용하고 있는 버킷, 사용한 적 있는 빈 버킷. 이렇게 본다. 중점은 EMPTY와 DELETED의 구분이다.
+
+
+typedef struct {
+    char key[KEY_SIZE];
+    status state; //헤시 테이블의 각 버킷에 현재 상황이 들어가게 끔 구죠체를 변경하였다.
+} element;
+
+void init_table(element ht[]) {
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        ht[i].state = EMPTY; //빈 상태로 초기 설정.
+    }
+}
+
+#define empty(item) ((item).state == EMPTY)
+#define deleted(item) ((item).state == DELETED)
+#define occupied(item) ((item).state == OCCUPIED)
+
+int transform(char* key) {
+    unsigned long number = 0;
+    while (*key)
+        number = 31 * number + (unsigned char)*key++;
+    return number;
+}
+
+int hash_function(char* key) {
+    return transform(key) % TABLE_SIZE;
+}
+
+void hash_lp_search(element item, element ht[]) {
+    int i, hash_value;
+    hash_value = i = hash_function(item.key);
+
+    while (ht[i].state != EMPTY) { //중요한 지점이다. 오로지 EMPTY일때만 탐색을 종료한다. DELETED을 만나면 버킷이 비어있더라도 멈추지 않고 탐색을 이어 나가는 것이다.
+        if (ht[i].state == OCCUPIED &&
+            strcmp(ht[i].key, item.key) == 0) { //만약 버킷에 키가 있고, 그리고 찾으려는 키와 같다면
+            printf("탐색 %s: 위치 = %d\n", item.key, i);
+            return;
+        }
+        i = (i + 1) % TABLE_SIZE;
+        if (i == hash_value) break;
+    }
+    printf("찾는 값이 테이블에 없음\n");
+}
+
+void hash_lp_delete(element item, element ht[]) { //삭제함수
+    int i, hash_value;
+    hash_value = i = hash_function(item.key); //우선 해싱함수를 적용하여 인덱스를 찾아낸다.
+
+    while (ht[i].state != EMPTY) {
+        if (ht[i].state == OCCUPIED &&
+            strcmp(ht[i].key, item.key) == 0) { //만약 EMPTY가 아닌 상태로 계속 순회하다가,  OCCUPIED 인 동시에 버킷 안에 있는 값이 찾으려는 값과 같다면 
+            ht[i].state = DELETED;   //그 버킷의 상태를 DELETED으로 바꾼다. 단 버킷 내의 내용을 굳이 삭제시킬 필요는 없다.
+            return;
+        }
+        i = (i + 1) % TABLE_SIZE;
+        if (i == hash_value) break;
+    }
+    printf("삭제할 키가 없음\n");
+}
+
+//자 이제 삽입함수를 보자. 삭제함수를 고려해야 하기에, 삽입함수도 많이 바뀌어 졌다.
+//이렇게 봐보자. delete 상태의 빈 공간을 보자마자, 삽입하게 된다면, 문제가 생긴다. 왜냐하면 delete 버킷 이후 순회를 돌지 않은 곳에서 중복 키가 있을 수 있기 때문이다.
+// 즉 고려를 안하면 같은 중복키를 다른 버킷에 저장하게 되는 불상사가 일어나게 된다. 이를 막기위해, 중복키를 찾기위해 해쉬 경로 전체를 순회해야 한다. 코드를 보자.
+void hash_lp_add(element item, element ht[]) {
+    int i, hash_value;
+    int first_deleted = -1;
+
+    hash_value = i = hash_function(item.key); //우선 해쉬 함수로 첫 위치 지정.
+
+    while (ht[i].state != EMPTY) { //EMPTY라면 그때 멈춘다.
+
+        if (ht[i].state == OCCUPIED &&
+            strcmp(ht[i].key, item.key) == 0) {   //만약 순회중 OCCUPIED이면서 동시에 값이 같은 버킷을 만난다면 바로 중복키라고 출력하면 되는 결과다.
+            fprintf(stderr, "중복 키\n");
+            return;
+        }
+
+        if (ht[i].state == DELETED && first_deleted == -1) { //만약 처음으로 DELETED을 만났다고 치자. 이후 해쉬 경로 전체를 순회하는데, 중복이 없을 경우에는 이 DELETED 인덱스에 저장해야 할 것이다.
+            first_deleted = i;  //그러기 위하여 위치 저장.
+        }
+
+        i = (i + 1) % TABLE_SIZE;
+        if (i == hash_value) break;
+    }
+
+    if (first_deleted != -1) //만약 한번이라도 delete공간을 만나고, 저장했다면
+        i = first_deleted; //i를 그 자리로 바꾼다. 만약 한번도 만나지 않았다면, 원래 삽입 함수처럼, 순회를 마치고 empty 자리에 삽입하게 되는 것이다.
+
+    ht[i] = item;
+    ht[i].state = OCCUPIED;
+}
